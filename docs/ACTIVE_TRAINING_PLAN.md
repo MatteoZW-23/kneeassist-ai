@@ -4,7 +4,7 @@ MRNet alone supplies fitting labels for general abnormality, ACL tear and menisc
 
 KneeMRI is reserved for ACL regression evaluation. It was already evaluated previously. fastMRI is reserved for a future external meniscus evaluation after complete integrity, annotation, orientation and identity checks; do not use this cohort to select the training model. ACL sprain is not an automatic MRNet-tear equivalent. Missing annotations require the reviewed-file list and remain limited reference labels.
 
-No X-ray, unidentified archive or alternate RSNA package is included in this run. They remain stored in data/archives for provenance; inclusion would require a separate justified task.
+No X-ray, unidentified archive or alternate RSNA package is included in this run. Those files were moved outside the active project into `C:\Users\HP\Desktop\Other-Datasets-Not-Used`; inclusion would require a separate justified task.
 
 Fresh run configuration: configs/mrnet_fresh_01.yaml. Outputs: runs/mrnet_fresh_01. Both ImageNet-pretrained frozen encoders and freshly initialised classification heads are trained. No prior locally fitted checkpoints or cached features are loaded. This is a reproducible fresh baseline, not a claim of improved architecture or clinical readiness.
 

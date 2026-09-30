@@ -1,7 +1,7 @@
 # Dataset acquisition review — 27 September 2026
 
 ## Actual outcome
-Downloaded five public SKM-TEA reference files: train.json, val.json, test.json, DATASET.md and LICENSE. The JSON files describe 155 scans and 476 detection annotations across 16 categories. These are annotations and metadata, NOT MRI images. SHA-256 hashes and source URLs are recorded in data/external/SKM-TEA/reference_annotations_v1.0.0/download_manifest.json. No new MRI studies were downloaded; no training configuration or checkpoint changed.
+Downloaded five public SKM-TEA reference files: train.json, val.json, test.json, DATASET.md and LICENSE. The JSON files describe 155 scans and 476 detection annotations across 16 categories. These are annotations and metadata, NOT MRI images. They were later moved outside the active project with other unused material; no training configuration or checkpoint changed.
 
 ## What is already available
 MRNet is the current training source. KneeMRI is already imported and previously evaluated, so it is not a fresh untouched test cohort. fastMRI import_status.json reports 199 completed and reviewed volumes with archive integrity verified. fastMRI+ annotation CSVs are already present. Missing annotation rows are not confirmed negative diagnoses. Do not download duplicate copies or move previously evaluated cohorts into training without defining a new evaluation plan.

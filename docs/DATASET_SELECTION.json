@@ -6,11 +6,13 @@
     "KneeMRI": "ACL only; previously evaluated, not a new untouched test",
     "fastMRI": "candidate meniscus evaluation; import and label/identity validation pending"
   },
-  "excluded_from_current_training": [
-    "Knee Osteoarthritis Dataset with Severity Grading.zip",
+  "moved_outside_active_project": [
     "archive (4).zip",
+    "Knee Osteoarthritis Dataset with Severity Grading",
     "RSNA Knee Abnormality Detection - JPEG 224x224.zip",
-    "RSNA Knee MRI - Processed 3D Volumes.zip"
+    "RSNA Knee MRI - Processed 3D Volumes.zip",
+    "SKM-TEA reference annotations",
+    "Incomplete KneeMRI download"
   ],
   "rules": [
     "No absent-label-as-negative substitution",

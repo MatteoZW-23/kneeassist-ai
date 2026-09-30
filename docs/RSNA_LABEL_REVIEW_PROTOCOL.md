@@ -19,7 +19,7 @@ The resulting manifest uses a pseudonymous case ID. Do not publish the salt, pat
 
 ## Step 2 Independent review
 
-Give each reviewer the same cases and the blank `data/external/RSNA_review/label_template.csv` schema. Each reviewer should complete one row per case and use only:
+Give each reviewer the same cases and a blank CSV that uses the documented review schema. Each reviewer should complete one row per case and use only:
 
 - `0` for absent,
 - `1` for present,
