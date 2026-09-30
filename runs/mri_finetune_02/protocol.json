@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "config_sha256": "83ce9e0411f82c28a20914adc63958f5e36b80a1ce6871002fbfef0fafb6e5c4",
+  "split_sha256": "262bb2a91c969b6b844842acffe90522ea98a5c2a0d892eebb0cf174efa9d06e",
+  "counts": {
+    "fit": 804,
+    "tune": 226,
+    "official_valid": 120,
+    "calibration": 100
+  },
+  "training_data": "MRNet only",
+  "selection": "Internal tuning macro AUROC; incumbent included; no external metric-based selection",
+  "calibration": "100 cases removed from old fitting partition; candidate-only calibration after selection",
+  "operating_point": "Maximum Youden J on reserved calibration cohort; not a clinical operating point",
+  "budget": "Two architectures, one seed, up to 6 fine-tuning epochs each, patience 3",
+  "limitations": [
+    "Study independence only; patient linkage unavailable",
+    "Internal tuning and official validation previously evaluated",
+    "Incumbent previously trained on calibration subset: never calibrate incumbent on it",
+    "New candidate uses 804 fitting cases vs incumbent 904; comparisons are development experiments",
+    "KneeMRI previously evaluated; fastMRI reference labels non-exhaustive",
+    "No multi-seed claim or clinical readiness claim"
+  ]
+}

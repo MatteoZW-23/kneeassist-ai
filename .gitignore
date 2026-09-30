@@ -1,0 +1,67 @@
+# Python and local tooling
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.streamlit/
+
+# Local configuration and environment secrets
+.env
+.env.*
+!*.example
+
+# Large, licensed, or potentially sensitive MRI data
+data/*
+!data/README.md
+!data/.gitkeep
+sample_cases/*
+!sample_cases/README.md
+!sample_cases/.gitkeep
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tar.xz
+*.part
+*.h5
+*.dcm
+*.nii
+*.nii.gz
+
+# Keep the one active research checkpoint only; exclude cached and historical weights
+models/pretrained/
+models/*.pth
+!models/best_model.pth
+runs/**/models/
+*.pt
+*.ckpt
+
+# Generated runtime outputs and local history
+logs/
+results/
+release/
+history/
+runs/*
+!runs/README.md
+!runs/mri_finetune_02/
+runs/mri_finetune_02/*
+!runs/mri_finetune_02/README.md
+!runs/mri_finetune_02/READINESS_REPORT.md
+!runs/mri_finetune_02/validation_summary.json
+!runs/mri_finetune_02/protocol.json
+!runs/mri_finetune_02/test_results.txt
+!runs/model_family_v2/
+runs/model_family_v2/*
+!runs/model_family_v2/README.md
+!runs/model_family_v2/FINAL_DECISION.md
+!runs/model_family_v2/FINAL_VERIFICATION.md
+!runs/model_family_v2/results/
+runs/model_family_v2/results/*
+!runs/model_family_v2/results/model_comparison.json
+!runs/model_family_v2/results/REPORT.md
+
+# Derived document QA assets and office lock files
+docs/academic/qa/
+docs/academic/*previous*
+~$*

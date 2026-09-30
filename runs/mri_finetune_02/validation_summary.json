@@ -1,0 +1,223 @@
+{
+  "candidate_improved_internal_auroc": true,
+  "selected_architecture": "efficientnet_b0",
+  "selected_stage": "frozen_warmup",
+  "mrnet": {
+    "dataset": "MRNet-v1.0",
+    "architecture": "efficientnet_b0",
+    "partition": "official_valid",
+    "exams": 120,
+    "metrics": {
+      "abnormal": {
+        "auroc": 0.9006315789473684,
+        "average_precision": 0.9679541342240485,
+        "f1": 0.9270833333333334,
+        "sensitivity": 0.9368421052631579,
+        "specificity": 0.68,
+        "precision": 0.9175257731958762,
+        "accuracy": 0.8833333333333333,
+        "threshold": 0.6943677953637496,
+        "confusion_matrix": [
+          [
+            17,
+            8
+          ],
+          [
+            6,
+            89
+          ]
+        ],
+        "positive_cases": 95,
+        "negative_cases": 25
+      },
+      "acl": {
+        "auroc": 0.8251964085297419,
+        "average_precision": 0.7991313931018582,
+        "f1": 0.7457627118644068,
+        "sensitivity": 0.8148148148148148,
+        "specificity": 0.696969696969697,
+        "precision": 0.6875,
+        "accuracy": 0.75,
+        "threshold": 0.24608272654141142,
+        "confusion_matrix": [
+          [
+            46,
+            20
+          ],
+          [
+            10,
+            44
+          ]
+        ],
+        "positive_cases": 54,
+        "negative_cases": 66
+      },
+      "meniscus": {
+        "auroc": 0.7542420814479638,
+        "average_precision": 0.7063060856957128,
+        "f1": 0.6306306306306306,
+        "sensitivity": 0.6730769230769231,
+        "specificity": 0.6470588235294118,
+        "precision": 0.5932203389830508,
+        "accuracy": 0.6583333333333333,
+        "threshold": 0.4807751497984078,
+        "confusion_matrix": [
+          [
+            44,
+            24
+          ],
+          [
+            17,
+            35
+          ]
+        ],
+        "positive_cases": 52,
+        "negative_cases": 68
+      },
+      "macro": {
+        "auroc": 0.8266900229750247,
+        "average_precision": 0.8244638710072065,
+        "f1": 0.767825558609457,
+        "sensitivity": 0.8082446143849653,
+        "specificity": 0.6746761734997029,
+        "precision": 0.7327487040596422,
+        "accuracy": 0.7638888888888888
+      }
+    },
+    "threshold_source": "Reserved MRNet calibration partition (100 studies)",
+    "selection_source": "Internal validation macro AUROC",
+    "limitation": "Previously used official validation set, not an independent external test. Study-level separation only; patient linkage unavailable."
+  },
+  "kneemri": {
+    "primary": {
+      "acl": {
+        "auroc": 0.6029749024993846,
+        "average_precision": 0.3167935456089418,
+        "f1": 0.39178515007898895,
+        "sensitivity": 0.5486725663716814,
+        "specificity": 0.5856515373352855,
+        "precision": 0.3046683046683047,
+        "accuracy": 0.5764576457645765,
+        "threshold": 0.24608272654141142,
+        "confusion_matrix": [
+          [
+            400,
+            283
+          ],
+          [
+            102,
+            124
+          ]
+        ],
+        "positive_cases": 226,
+        "negative_cases": 683
+      },
+      "macro": {
+        "auroc": 0.6029749024993846,
+        "average_precision": 0.3167935456089418,
+        "f1": 0.39178515007898895,
+        "sensitivity": 0.5486725663716814,
+        "specificity": 0.5856515373352855,
+        "precision": 0.3046683046683047,
+        "accuracy": 0.5764576457645765
+      }
+    },
+    "complete_vs_healthy": {
+      "acl": {
+        "auroc": 0.6366298416078797,
+        "average_precision": 0.11528264164763957,
+        "f1": 0.1876675603217158,
+        "sensitivity": 0.6363636363636364,
+        "specificity": 0.5856515373352855,
+        "precision": 0.11006289308176101,
+        "accuracy": 0.5894308943089431,
+        "threshold": 0.24608272654141142,
+        "confusion_matrix": [
+          [
+            400,
+            283
+          ],
+          [
+            20,
+            35
+          ]
+        ],
+        "positive_cases": 55,
+        "negative_cases": 683
+      },
+      "macro": {
+        "auroc": 0.6366298416078797,
+        "average_precision": 0.11528264164763957,
+        "f1": 0.1876675603217158,
+        "sensitivity": 0.6363636363636364,
+        "specificity": 0.5856515373352855,
+        "precision": 0.11006289308176101,
+        "accuracy": 0.5894308943089431
+      }
+    },
+    "volumes": 917,
+    "exams": 909,
+    "unique_pixel_hashes": 916,
+    "protocol": {
+      "checkpoint_sha256": "b60293f6c7130fd646c81b6d758584faf3e17b2689503b5278ad711156d546da",
+      "targets": [
+        "acl"
+      ],
+      "threshold_source": "Reserved MRNet calibration partition (100 studies); locked before external evaluation",
+      "primary_mapping": "0 healthy ACL; 1 or 2 ACL injury",
+      "unit": "examId; mean score across repeated series; maximum severity",
+      "secondary": "complete rupture vs healthy, excluding partial injuries",
+      "input": "full sagittal volumes; no ROI crop; missing axial and coronal planes",
+      "patient_independence": "not established by examId alone",
+      "no_training": true
+    }
+  },
+  "fastmri": {
+    "files": 199,
+    "excluded_unreviewed": 0,
+    "metrics": {
+      "meniscus": {
+        "auroc": 0.656148867313916,
+        "average_precision": 0.6554454777769825,
+        "f1": 0.6666666666666666,
+        "sensitivity": 0.7087378640776699,
+        "specificity": 0.5520833333333334,
+        "precision": 0.6293103448275862,
+        "accuracy": 0.6331658291457286,
+        "threshold": 0.4807751497984078,
+        "confusion_matrix": [
+          [
+            53,
+            43
+          ],
+          [
+            30,
+            73
+          ]
+        ],
+        "positive_cases": 103,
+        "negative_cases": 96
+      },
+      "macro": {
+        "auroc": 0.656148867313916,
+        "average_precision": 0.6554454777769825,
+        "f1": 0.6666666666666666,
+        "sensitivity": 0.7087378640776699,
+        "specificity": 0.5520833333333334,
+        "precision": 0.6293103448275862,
+        "accuracy": 0.6331658291457286
+      }
+    },
+    "protocol": {
+      "checkpoint_sha256": "b60293f6c7130fd646c81b6d758584faf3e17b2689503b5278ad711156d546da",
+      "target": "meniscus",
+      "positive_reference": "At least one exact Meniscus Tear annotation",
+      "negative_reference": "Reviewed file without Meniscus Tear annotation; limited non-exhaustive reference",
+      "input": "coronal reconstruction_rss only; no annotation-informed crops",
+      "unit": "file; patient linkage unavailable",
+      "training_on_this_dataset": false,
+      "thresholds": "Reserved MRNet calibration partition (100 studies); locked before external evaluation",
+      "scope": "exploratory external evaluation, not clinical ground truth"
+    }
+  }
+}

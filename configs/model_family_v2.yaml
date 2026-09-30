@@ -1,0 +1,76 @@
+# Separate benchmark run. It never overwrites the active V1 checkpoint.
+project_name: KneeAssist AI
+seed: 42
+dataset:
+  name: MRNet-v1.0
+  root: data/MRNet-v1.0
+  manifest: data/mrnet_manifest.csv
+  splits: runs/mri_finetune_02/splits.json
+  patient_mapping: null
+targets:
+- key: abnormal
+  display: General Abnormality
+  threshold: 0.5
+- key: acl
+  display: ACL Tear
+  threshold: 0.5
+- key: meniscus
+  display: Meniscal Tear
+  threshold: 0.5
+preprocessing:
+  image_size: 224
+  slices_per_plane: 12
+  percentile_low: 1.0
+  percentile_high: 99.0
+  max_slices: 512
+  max_dimension: 1024
+  max_upload_mb: 100
+  max_dicom_files: 768
+  max_dicom_series_slices: 512
+  planes: [axial, coronal, sagittal]
+model:
+  architectures: [resnet18, resnet50, densenet121, efficientnet_b0, swin_t]
+  selected_architecture: auto
+  encoder_pretrained: true
+  encoder_precision: float32
+  training_mode: frozen_encoder_family_benchmark
+  pooling: mean_max
+  aggregation_method: mean_max
+  hidden_dim: 128
+  dropout: 0.5
+  encoder_chunk_size: 2
+training:
+  device: auto
+  mixed_precision: true
+  batch_size: 1
+  epochs: 6
+  learning_rate: 3.0e-5
+  weight_decay: 0.01
+  early_stopping_patience: 3
+  scheduler_patience: 4
+  scheduler_factor: 0.5
+  num_workers: 0
+  cpu_threads: 4
+  modality_dropout: 0.1
+  validation_fraction: 0.2
+  gradient_clip: 5.0
+evaluation:
+  threshold_selection: internal_validation_f1
+  checkpoint: runs/model_family_v2/models/best_model.pth
+  directory: runs/model_family_v2/results
+  prediction_examples: 3
+  uncertainty_estimation: false
+  uncertainty_samples: 1
+ui:
+  host: 127.0.0.1
+  port: 8501
+  margin_high: 0.25
+  margin_moderate: 0.1
+lifecycle:
+  state: benchmark_training_pending
+  training_enabled: true
+  inference_enabled: false
+paths:
+  models: runs/model_family_v2/models
+  features: runs/model_family_v2/features
+run_directory: runs/model_family_v2

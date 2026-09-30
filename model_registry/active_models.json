@@ -1,0 +1,38 @@
+{
+  "registry_version": "1.0",
+  "selection_policy": {
+    "name": "validated_research_score_v1",
+    "weights": {"auroc": 0.45, "sensitivity": 0.30, "pr_auc": 0.15, "f1": 0.10},
+    "rule": "Only existing research checkpoints with a compatible input and locked validation evidence are eligible."
+  },
+  "ensemble_policy": {
+    "status": "disabled_pending_validated_members",
+    "rule": "An ensemble is enabled only when calibrated member probabilities, weights, and improvement over the active single model are established on a locked evaluation protocol.",
+    "disagreement_thresholds": {"moderate": 0.10, "high": 0.20}
+  },
+  "ensembles": [],
+  "localizers": [],
+  "models": [
+    {
+      "id": "mrnet-efficientnet-b0-frozen-calibrated-v1",
+      "architecture": "efficientnet_b0",
+      "version": "1.0",
+      "checkpoint": "models/best_model.pth",
+      "training_dataset": "MRNet-v1.0",
+      "supported_targets": ["abnormal", "acl", "meniscus"],
+      "supported_planes": ["axial", "coronal", "sagittal"],
+      "minimum_planes": 1,
+      "preprocessing_config": "checkpoint embedded configuration",
+      "calibration": "Reserved MRNet development calibration subset; not clinically or externally calibrated.",
+      "calibration_metrics": {"brier_score": null, "expected_calibration_error": null, "status": "Not recorded for this existing checkpoint; do not infer calibration quality from this registry."},
+      "inference_profile": "Local PyTorch study-level inference; speed varies by device and number of slices.",
+      "inference_time_ms": null,
+      "validation_metrics": {
+        "abnormal": {"auroc": 0.9006315789473684, "pr_auc": 0.9679541342240485, "sensitivity": 0.9368421052631579, "specificity": 0.68, "f1": 0.9270833333333334, "precision": 0.9175257731958762},
+        "acl": {"auroc": 0.8251964085297419, "pr_auc": 0.7991313931018582, "sensitivity": 0.8148148148148148, "specificity": 0.696969696969697, "f1": 0.7457627118644068, "precision": 0.6875},
+        "meniscus": {"auroc": 0.7542420814479638, "pr_auc": 0.7063060856957128, "sensitivity": 0.6730769230769231, "specificity": 0.6470588235294118, "f1": 0.6306306306306306, "precision": 0.5932203389830508}
+      },
+      "limitations": "MRNet-only training; one-seed development evidence; patient linkage unavailable; not clinically validated."
+    }
+  ]
+}

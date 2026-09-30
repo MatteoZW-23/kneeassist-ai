@@ -1,0 +1,87 @@
+project_name: KneeAssist AI
+seed: 42
+dataset:
+  name: MRNet-v1.0
+  root: data/MRNet-v1.0
+  manifest: data/mrnet_manifest.csv
+  splits: data/splits.json
+  patient_mapping: null
+targets:
+- key: abnormal
+  display: General Abnormality
+  threshold: 0.5
+- key: acl
+  display: ACL Tear
+  threshold: 0.5
+- key: meniscus
+  display: Meniscal Tear
+  threshold: 0.5
+preprocessing:
+  image_size: 224
+  slices_per_plane: 12
+  percentile_low: 1.0
+  percentile_high: 99.0
+  max_slices: 512
+  max_dimension: 1024
+  max_upload_mb: 100
+  planes:
+  - axial
+  - coronal
+  - sagittal
+model:
+  architectures:
+  - resnet18
+  - efficientnet_b0
+  selected_architecture: auto
+  encoder_pretrained: true
+  encoder_precision: float32
+  training_mode: frozen_encoder
+  pooling: mean_max
+  hidden_dim: 128
+  dropout: 0.5
+training:
+  device: auto
+  mixed_precision: true
+  batch_size: 32
+  epochs: 60
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  early_stopping_patience: 10
+  scheduler_patience: 4
+  scheduler_factor: 0.5
+  num_workers: 0
+  cpu_threads: 4
+  modality_dropout: 0.1
+  validation_fraction: 0.2
+  gradient_clip: 5.0
+evaluation:
+  threshold_selection: internal_validation_f1
+  checkpoint: runs/mrnet_fresh_01/models/best_model.pth
+  directory: runs/mrnet_fresh_01/results
+  prediction_examples: 3
+ui:
+  host: 127.0.0.1
+  port: 8501
+  margin_high: 0.25
+  margin_moderate: 0.1
+external_kneemri:
+  root: data/external/KneeMRI/original_download
+  metadata: data/external/KneeMRI/metadata.csv
+  results: results/external_kneemri
+lifecycle:
+  state: fresh_mrnet_training
+  training_enabled: true
+  inference_enabled: false
+  reset_requested: true
+  deletion_completed: false
+external_fastmri:
+  archive: data/archives/knee_singlecoil_val.tar.xz
+  root: data/external/fastMRI/images
+  manifest: data/external/fastMRI/image_manifest.csv
+  annotations: data/external/fastMRI-plus/knee.csv
+  reviewed_files: data/external/fastMRI-plus/knee_file_list.csv
+  intended_use: reserve for external evaluation after protocol review
+  label_mapping_verified: false
+paths:
+  models: runs/mrnet_fresh_01/models
+  features: runs/mrnet_fresh_01/features

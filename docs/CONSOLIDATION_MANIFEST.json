@@ -1,0 +1,38 @@
+[
+  {
+    "Source": "C:\\Users\\HP\\Desktop\\archive (4).zip",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\data\\archives\\archive (4).zip"
+  },
+  {
+    "Source": "C:\\Users\\HP\\Desktop\\Knee Osteoarthritis Dataset with Severity Grading.zip",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\data\\archives\\Knee Osteoarthritis Dataset with Severity Grading.zip"
+  },
+  {
+    "Source": "C:\\Users\\HP\\Desktop\\MRNet v1.zip",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\data\\archives\\MRNet v1.zip"
+  },
+  {
+    "Source": "C:\\Users\\HP\\Desktop\\RSNA Knee Abnormality Detection - JPEG 224x224.zip",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\data\\archives\\RSNA Knee Abnormality Detection - JPEG 224x224.zip"
+  },
+  {
+    "Source": "C:\\Users\\HP\\Desktop\\RSNA Knee MRI - Processed 3D Volumes.zip",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\data\\archives\\RSNA Knee MRI - Processed 3D Volumes.zip"
+  },
+  {
+    "Source": "C:\\Users\\HP\\Desktop\\volumetric_data.7z",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\data\\archives\\volumetric_data.7z"
+  },
+  {
+    "Source": "C:\\Users\\HP\\Desktop\\volumetric_data",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\data\\external\\KneeMRI\\original_download"
+  },
+  {
+    "Source": "C:\\Users\\HP\\Documents\\Codex\\2026-09-25\\referenced-chatgpt-conversation-this-is-an\\work",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\history\\development_workspace"
+  },
+  {
+    "Source": "C:\\Users\\HP\\Documents\\Codex\\2026-09-25\\referenced-chatgpt-conversation-this-is-an\\outputs",
+    "Destination": "C:\\Users\\HP\\Desktop\\KneeAssist-AI\\history\\previous_deliverables"
+  }
+]

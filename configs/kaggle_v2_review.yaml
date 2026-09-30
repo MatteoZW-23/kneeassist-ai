@@ -1,0 +1,23 @@
+# A protocol gate for future Kaggle V2 work. This is not a training configuration.
+dataset:
+  source: RSNA Knee Abnormality Detection competition
+  storage: Kaggle mounted input only
+  image_format: original DICOM
+  patient_level_split: required
+labels:
+  targets: [general_abnormality, acl_tear, meniscal_tear]
+  source_required: two_reviewer_agreement
+  uncertain_labels: exclude_until_adjudicated
+  report_text_as_ground_truth: false
+review:
+  reviewers_required: 2
+  image_quality_required: acceptable
+  adjudication_required_for_disagreement: true
+evaluation:
+  lock_checkpoint_before_external_test: true
+  external_test_set: required
+  metrics: [auroc, average_precision, f1, sensitivity, specificity, precision, accuracy, calibration]
+  report_subgroups: [site, scanner_manufacturer, field_strength, acquisition_plane]
+deployment:
+  permitted: research_only
+  clinical_readiness_claim: false

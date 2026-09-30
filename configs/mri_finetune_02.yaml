@@ -1,0 +1,92 @@
+project_name: KneeAssist AI
+seed: 42
+dataset:
+  name: MRNet-v1.0
+  root: data/MRNet-v1.0
+  manifest: data/mrnet_manifest.csv
+  splits: runs/mri_finetune_02/splits.json
+  patient_mapping: null
+targets:
+- key: abnormal
+  display: General Abnormality
+  threshold: 0.5
+- key: acl
+  display: ACL Tear
+  threshold: 0.5
+- key: meniscus
+  display: Meniscal Tear
+  threshold: 0.5
+preprocessing:
+  image_size: 224
+  slices_per_plane: 12
+  percentile_low: 1.0
+  percentile_high: 99.0
+  max_slices: 512
+  max_dimension: 1024
+  max_upload_mb: 100
+  planes:
+  - axial
+  - coronal
+  - sagittal
+model:
+  architectures:
+  - resnet18
+  - efficientnet_b0
+  selected_architecture: auto
+  encoder_pretrained: true
+  encoder_precision: float32
+  training_mode: staged_final_blocks
+  pooling: mean_max
+  hidden_dim: 128
+  dropout: 0.5
+  encoder_chunk_size: 4
+training:
+  device: auto
+  mixed_precision: true
+  batch_size: 1
+  epochs: 6
+  learning_rate: 3.0e-05
+  weight_decay: 0.01
+  early_stopping_patience: 3
+  scheduler_patience: 4
+  scheduler_factor: 0.5
+  num_workers: 0
+  cpu_threads: 4
+  modality_dropout: 0.1
+  validation_fraction: 0.2
+  gradient_clip: 5.0
+  warmup_epochs: 40
+  gradient_accumulation: 4
+  encoder_learning_rate: 1.0e-05
+evaluation:
+  threshold_selection: reserved_calibration_youden
+  checkpoint: runs/mri_finetune_02/models/best_model.pth
+  directory: runs/mri_finetune_02/results
+  prediction_examples: 3
+ui:
+  host: 127.0.0.1
+  port: 8501
+  margin_high: 0.25
+  margin_moderate: 0.1
+external_kneemri:
+  root: data/external/KneeMRI/original_download
+  metadata: data/external/KneeMRI/metadata.csv
+  results: results/external_kneemri
+lifecycle:
+  state: improvement_experiment
+  training_enabled: true
+  inference_enabled: false
+  reset_requested: true
+  deletion_completed: false
+external_fastmri:
+  archive: data/archives/knee_singlecoil_val.tar.xz
+  root: data/external/fastMRI/images
+  manifest: data/external/fastMRI/image_manifest.csv
+  annotations: data/external/fastMRI-plus/knee.csv
+  reviewed_files: data/external/fastMRI-plus/knee_file_list.csv
+  intended_use: Exploratory meniscus evaluation only; non-exhaustive reference annotations
+  label_mapping_verified: false
+paths:
+  models: runs/mri_finetune_02/models
+  features: runs/mrnet_fresh_01/features
+run_directory: runs/mri_finetune_02

@@ -1,0 +1,427 @@
+{
+  "criterion": "Internal validation macro AUROC (not training accuracy, not official validation)",
+  "winner": "efficientnet_b0",
+  "models": [
+    {
+      "architecture": "resnet18",
+      "dataset": "MRNet-v1.0",
+      "selected_epoch": 6,
+      "epochs_run": 6,
+      "partition": "internal_validation",
+      "metrics": {
+        "abnormal": {
+          "auroc": 0.8762866946244758,
+          "average_precision": 0.9702295363789967,
+          "f1": 0.912,
+          "sensitivity": 0.9344262295081968,
+          "specificity": 0.5116279069767442,
+          "precision": 0.890625,
+          "accuracy": 0.8539823008849557,
+          "threshold": 0.19,
+          "confusion_matrix": [
+            [
+              22,
+              21
+            ],
+            [
+              12,
+              171
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8197463768115942,
+          "average_precision": 0.650626550031768,
+          "f1": 0.5952380952380952,
+          "sensitivity": 0.5952380952380952,
+          "specificity": 0.907608695652174,
+          "precision": 0.5952380952380952,
+          "accuracy": 0.8495575221238938,
+          "threshold": 0.30999999999999994,
+          "confusion_matrix": [
+            [
+              167,
+              17
+            ],
+            [
+              17,
+              25
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8217514854042883,
+          "average_precision": 0.6843124256774706,
+          "f1": 0.6794258373205742,
+          "sensitivity": 0.8987341772151899,
+          "specificity": 0.5986394557823129,
+          "precision": 0.5461538461538461,
+          "accuracy": 0.7035398230088495,
+          "threshold": 0.18,
+          "confusion_matrix": [
+            [
+              88,
+              59
+            ],
+            [
+              8,
+              71
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8392615189467861,
+          "average_precision": 0.7683895040294116,
+          "f1": 0.7288879775195566,
+          "sensitivity": 0.8094661673204939,
+          "specificity": 0.6726253528037436,
+          "precision": 0.6773389804639804,
+          "accuracy": 0.8023598820058998
+        }
+      }
+    },
+    {
+      "architecture": "resnet50",
+      "dataset": "MRNet-v1.0",
+      "selected_epoch": 2,
+      "epochs_run": 5,
+      "partition": "internal_validation",
+      "metrics": {
+        "abnormal": {
+          "auroc": 0.8800355826661583,
+          "average_precision": 0.9711342780358132,
+          "f1": 0.917098445595855,
+          "sensitivity": 0.9672131147540983,
+          "specificity": 0.3953488372093023,
+          "precision": 0.8719211822660099,
+          "accuracy": 0.8584070796460177,
+          "threshold": 0.16999999999999998,
+          "confusion_matrix": [
+            [
+              17,
+              26
+            ],
+            [
+              6,
+              177
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.7899844720496895,
+          "average_precision": 0.6174399379791011,
+          "f1": 0.6097560975609756,
+          "sensitivity": 0.5952380952380952,
+          "specificity": 0.9184782608695652,
+          "precision": 0.625,
+          "accuracy": 0.8584070796460177,
+          "threshold": 0.27999999999999997,
+          "confusion_matrix": [
+            [
+              169,
+              15
+            ],
+            [
+              17,
+              25
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8124946181004048,
+          "average_precision": 0.6806245171799423,
+          "f1": 0.676923076923077,
+          "sensitivity": 0.8354430379746836,
+          "specificity": 0.6598639455782312,
+          "precision": 0.5689655172413793,
+          "accuracy": 0.7212389380530974,
+          "threshold": 0.21999999999999997,
+          "confusion_matrix": [
+            [
+              97,
+              50
+            ],
+            [
+              13,
+              66
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8275048909387509,
+          "average_precision": 0.7563995777316189,
+          "f1": 0.7345925400266359,
+          "sensitivity": 0.7992980826556257,
+          "specificity": 0.6578970145523663,
+          "precision": 0.6886288998357964,
+          "accuracy": 0.812684365781711
+        }
+      }
+    },
+    {
+      "architecture": "densenet121",
+      "dataset": "MRNet-v1.0",
+      "selected_epoch": 4,
+      "epochs_run": 6,
+      "partition": "internal_validation",
+      "metrics": {
+        "abnormal": {
+          "auroc": 0.8813063921718135,
+          "average_precision": 0.9721918365122129,
+          "f1": 0.9086161879895561,
+          "sensitivity": 0.9508196721311475,
+          "specificity": 0.3953488372093023,
+          "precision": 0.87,
+          "accuracy": 0.8451327433628318,
+          "threshold": 0.10999999999999999,
+          "confusion_matrix": [
+            [
+              17,
+              26
+            ],
+            [
+              9,
+              174
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8171583850931677,
+          "average_precision": 0.6150005166715897,
+          "f1": 0.5894736842105263,
+          "sensitivity": 0.6666666666666666,
+          "specificity": 0.8641304347826086,
+          "precision": 0.5283018867924528,
+          "accuracy": 0.827433628318584,
+          "threshold": 0.20999999999999996,
+          "confusion_matrix": [
+            [
+              159,
+              25
+            ],
+            [
+              14,
+              28
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8077154912597951,
+          "average_precision": 0.6635099832233637,
+          "f1": 0.6794258373205742,
+          "sensitivity": 0.8987341772151899,
+          "specificity": 0.5986394557823129,
+          "precision": 0.5461538461538461,
+          "accuracy": 0.7035398230088495,
+          "threshold": 0.19999999999999996,
+          "confusion_matrix": [
+            [
+              88,
+              59
+            ],
+            [
+              8,
+              71
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8353934228415921,
+          "average_precision": 0.7502341121357222,
+          "f1": 0.7258385698402189,
+          "sensitivity": 0.8387401720043347,
+          "specificity": 0.6193729092580746,
+          "precision": 0.6481519109820996,
+          "accuracy": 0.7920353982300884
+        }
+      }
+    },
+    {
+      "architecture": "efficientnet_b0",
+      "dataset": "MRNet-v1.0",
+      "selected_epoch": 4,
+      "epochs_run": 6,
+      "partition": "internal_validation",
+      "metrics": {
+        "abnormal": {
+          "auroc": 0.8857542254416063,
+          "average_precision": 0.9715775838330992,
+          "f1": 0.917098445595855,
+          "sensitivity": 0.9672131147540983,
+          "specificity": 0.3953488372093023,
+          "precision": 0.8719211822660099,
+          "accuracy": 0.8584070796460177,
+          "threshold": 0.10999999999999999,
+          "confusion_matrix": [
+            [
+              17,
+              26
+            ],
+            [
+              6,
+              177
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8216873706004141,
+          "average_precision": 0.6287014801928215,
+          "f1": 0.6052631578947368,
+          "sensitivity": 0.5476190476190477,
+          "specificity": 0.9402173913043478,
+          "precision": 0.6764705882352942,
+          "accuracy": 0.8672566371681416,
+          "threshold": 0.31999999999999995,
+          "confusion_matrix": [
+            [
+              173,
+              11
+            ],
+            [
+              19,
+              23
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.834151382071816,
+          "average_precision": 0.7005236220432249,
+          "f1": 0.7076923076923077,
+          "sensitivity": 0.8734177215189873,
+          "specificity": 0.6802721088435374,
+          "precision": 0.5948275862068966,
+          "accuracy": 0.7477876106194691,
+          "threshold": 0.24999999999999994,
+          "confusion_matrix": [
+            [
+              100,
+              47
+            ],
+            [
+              10,
+              69
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8471976593712789,
+          "average_precision": 0.7669342286897152,
+          "f1": 0.7433513037276333,
+          "sensitivity": 0.7960832946307111,
+          "specificity": 0.6719461124523959,
+          "precision": 0.714406452236067,
+          "accuracy": 0.8244837758112095
+        }
+      }
+    },
+    {
+      "architecture": "swin_t",
+      "dataset": "MRNet-v1.0",
+      "selected_epoch": 6,
+      "epochs_run": 6,
+      "partition": "internal_validation",
+      "metrics": {
+        "abnormal": {
+          "auroc": 0.8901385182361163,
+          "average_precision": 0.9732265589943115,
+          "f1": 0.9234972677595629,
+          "sensitivity": 0.9234972677595629,
+          "specificity": 0.6744186046511628,
+          "precision": 0.9234972677595629,
+          "accuracy": 0.8761061946902655,
+          "threshold": 0.22999999999999998,
+          "confusion_matrix": [
+            [
+              29,
+              14
+            ],
+            [
+              14,
+              169
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.812694099378882,
+          "average_precision": 0.6234600587807273,
+          "f1": 0.5974025974025974,
+          "sensitivity": 0.5476190476190477,
+          "specificity": 0.9347826086956522,
+          "precision": 0.6571428571428571,
+          "accuracy": 0.8628318584070797,
+          "threshold": 0.35999999999999993,
+          "confusion_matrix": [
+            [
+              172,
+              12
+            ],
+            [
+              19,
+              23
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.815809868251098,
+          "average_precision": 0.6654134030278045,
+          "f1": 0.7010309278350515,
+          "sensitivity": 0.8607594936708861,
+          "specificity": 0.6802721088435374,
+          "precision": 0.591304347826087,
+          "accuracy": 0.7433628318584071,
+          "threshold": 0.21999999999999997,
+          "confusion_matrix": [
+            [
+              100,
+              47
+            ],
+            [
+              11,
+              68
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8395474952886989,
+          "average_precision": 0.7540333402676144,
+          "f1": 0.7406435976657372,
+          "sensitivity": 0.7772919363498323,
+          "specificity": 0.7631577740634508,
+          "precision": 0.7239814909095023,
+          "accuracy": 0.8274336283185842
+        }
+      }
+    }
+  ],
+  "dataset": "MRNet-v1.0"
+}

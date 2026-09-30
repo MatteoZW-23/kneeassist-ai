@@ -1,0 +1,22 @@
+{
+  "training": [
+    "MRNet-v1.0"
+  ],
+  "external_evaluation": {
+    "KneeMRI": "ACL only; previously evaluated, not a new untouched test",
+    "fastMRI": "candidate meniscus evaluation; import and label/identity validation pending"
+  },
+  "excluded_from_current_training": [
+    "Knee Osteoarthritis Dataset with Severity Grading.zip",
+    "archive (4).zip",
+    "RSNA Knee Abnormality Detection - JPEG 224x224.zip",
+    "RSNA Knee MRI - Processed 3D Volumes.zip"
+  ],
+  "rules": [
+    "No absent-label-as-negative substitution",
+    "No pooling MRI and X-ray",
+    "No tuning thresholds on external cohorts",
+    "Study independence is not verified patient independence",
+    "Fresh run cannot reuse previous fitted checkpoints or feature cache"
+  ]
+}

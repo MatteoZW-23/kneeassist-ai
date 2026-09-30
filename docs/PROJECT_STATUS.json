@@ -1,0 +1,21 @@
+{
+  "state": "fresh_training_pipeline_started",
+  "training_enabled": false,
+  "inference_enabled": false,
+  "deletion_completed": false,
+  "deletion_blocker": "automatic approval review: blocked by policy",
+  "raw_datasets_preserved": true,
+  "fresh_run_config": "configs/mrnet_fresh_01.yaml",
+  "fresh_run_directory": "runs/mrnet_fresh_01",
+  "dashboard_enabled": false,
+  "fastmri_import": "in_progress",
+  "training_dataset": "MRNet-v1.0",
+  "fresh_run_training_enabled": true,
+  "preflight": {
+    "studies": 1250,
+    "fit": 904,
+    "tune": 226,
+    "official_validation": 120,
+    "relevant_tests_passed": 16
+  }
+}

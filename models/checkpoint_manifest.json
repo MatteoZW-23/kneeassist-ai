@@ -1,0 +1,15 @@
+[
+  {
+    "file": "models/best_model.pth",
+    "bytes": 20331709,
+    "sha256": "b60293f6c7130fd646c81b6d758584faf3e17b2689503b5278ad711156d546da",
+    "architecture": "efficientnet_b0",
+    "training_dataset": "MRNet-v1.0",
+    "targets": [
+      "abnormal",
+      "acl",
+      "meniscus"
+    ],
+    "release_role": "Active calibrated research checkpoint"
+  }
+]
