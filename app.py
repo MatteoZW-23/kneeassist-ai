@@ -48,67 +48,6 @@ def clear_case():
     st.session_state.clear()
     st.session_state.upload_generation=generation
 
-def adjust_attention_intensity(overlay, intensity):
-    """Adjust the intensity of attention overlay for better visualization."""
-    import numpy as np
-    overlay_adjusted = overlay.copy()
-    # Adjust the attention channel (red channel in overlay)
-    overlay_adjusted[:, :, 0] = np.clip(overlay_adjusted[:, :, 0] * intensity, 0, 1)
-    return overlay_adjusted
-
-def get_combined_attention(attention_cache, target, volumes):
-    """Combine attention maps from multiple planes for comprehensive visualization."""
-    if not attention_cache:
-        return None
-    
-    try:
-        # Get attention maps for all available planes
-        plane_attentions = {}
-        for plane in volumes:
-            key = f"{target}/{plane}"
-            if key in attention_cache:
-                plane_attentions[plane] = attention_cache[key]
-        
-        if not plane_attentions:
-            return None
-        
-        # Use the first plane as reference for structure
-        reference_plane = list(plane_attentions.keys())[0]
-        reference_attention = plane_attentions[reference_plane]
-        
-        # Combine attention maps by averaging
-        combined_original = reference_attention['original'].copy()
-        combined_overlay = reference_attention['overlay'].copy()
-        
-        for plane, attention in plane_attentions.items():
-            if plane != reference_plane:
-                # Resize to match reference if needed using scipy or fallback
-                if attention['original'].shape != combined_original.shape:
-                    try:
-                        from scipy.ndimage import zoom
-                        for i in range(len(attention['original'])):
-                            scale_factors = (combined_original.shape[1] / attention['original'].shape[1],
-                                          combined_original.shape[2] / attention['original'].shape[2])
-                            combined_original[i] = zoom(attention['original'][i], scale_factors, order=1)
-                            combined_overlay[i] = zoom(attention['overlay'][i], scale_factors, order=1)
-                    except ImportError:
-                        # Fallback: skip planes with different sizes
-                        continue
-                else:
-                    combined_original = (combined_original + attention['original']) / 2
-                    combined_overlay = (combined_overlay + attention['overlay']) / 2
-        
-        return {
-            'original': combined_original,
-            'overlay': combined_overlay,
-            'indices': reference_attention['indices'],
-            'suggested_slice': reference_attention['suggested_slice'],
-            'note': f"Combined attention from {len(plane_attentions)} planes: {', '.join(plane_attentions.keys())}",
-            'has_positive_attention': any(p['has_positive_attention'] for p in plane_attentions.values())
-        }
-    except Exception:
-        return None
-
 with st.sidebar:
     st.markdown('## KneeAssist AI')
     st.caption('MRI RESEARCH WORKSPACE · V1')
@@ -119,8 +58,8 @@ with st.sidebar:
     st.button('Clear current case',use_container_width=True,on_click=clear_case)
     st.caption('Research and clinical decision support. Not an autonomous diagnostic system.')
 
-st.markdown('<div class="intro"><div class="tag">Knee MRI · decision support</div><h1>KneeAssist AI</h1><p>Review a study. Explore model findings. Keep clinical judgment in control.</p></div>',unsafe_allow_html=True)
-st.warning('Decision-support output. Clinical review required. Model attention is not a confirmed lesion.')
+st.markdown('<div class="intro"><div class="tag">Knee MRI · research review</div><h1>KneeAssist AI</h1><p>Review study-level model scores and attention maps. Clinical judgment remains essential.</p></div>',unsafe_allow_html=True)
+st.warning('Research decision-support prototype. Clinical review is required. Model attention is not a confirmed lesion or lesion location.')
 with st.expander('Model evidence and supported inputs'):
     from src.inference.readiness import deployment_evidence
     evidence=deployment_evidence(cfg)
@@ -240,7 +179,7 @@ with left:
             st.info('💡 **Troubleshooting**: Check the file format and try again. If this continues, restart the application or check the application logs.')
 
 with right:
-    st.subheader('2 · Review findings')
+    st.subheader('2 · Review research scores')
     if 'result' not in st.session_state:
         st.info('Add an MRI study and select Analyse study to view predictions and model attention.')
         st.markdown('**Three imaging planes, one study-level assessment**')
@@ -254,15 +193,15 @@ with right:
                 with column:
                     st.metric(finding['finding'],f"{finding['probability']:.1%}")
                     st.caption(finding['status'])
-                    # Display uncertainty if available
+                    # MC-dropout variation is displayed as an exploratory model-stability signal,
+                    # never as clinical certainty.
                     if 'uncertainty' in finding:
-                        uncertainty_color = '🟢' if finding['uncertainty_level'] == 'Low' else '🟡' if finding['uncertainty_level'] == 'Moderate' else '🔴'
-                        st.caption(f"{uncertainty_color} Uncertainty: {finding['uncertainty']:.3f} ({finding['uncertainty_level']})")
+                        st.caption(f"MC-dropout variation: {finding['uncertainty']:.3f} ({finding['uncertainty_level']}; exploratory)")
         st.caption(result['probability_note'])
         if 'uncertainty_note' in result:
             st.info(result['uncertainty_note'])
         if result['missing_planes']:st.warning('Missing: '+', '.join(result['missing_planes'])+'. '+result['incomplete_study_warning'])
-        st.markdown(f"**Score separation: {result['score_separation']}** · Clinical confidence: not established")
+        st.markdown(f"**Distance from research threshold: {result['score_separation']}** · Clinical confidence: not established")
         st.caption(result['confidence_note'])
         with st.expander('Validated model selection and study compatibility',expanded=True):
             selection=result.get('model_selection',{})
@@ -288,7 +227,7 @@ with right:
         # Add uncertainty column if available
         if 'uncertainty' in result['findings'][0]:
             for i,f in enumerate(result['findings']):
-                table_data[i]['Uncertainty'] = f"{f['uncertainty']:.3f} ({f['uncertainty_level']})"
+                table_data[i]['MC-dropout variation'] = f"{f['uncertainty']:.3f} ({f['uncertainty_level']}; exploratory)"
         table=pd.DataFrame(table_data)
         st.dataframe(table,hide_index=True,use_container_width=True)
         with st.expander('Detection and segmentation status'):
@@ -300,7 +239,7 @@ with right:
                 else:
                     st.info(f"{label}: unavailable. {state.get('reason','No approved model is registered.')}")
             st.caption('Grad-CAM remains classifier attention only; it is not a detection box or segmentation mask.')
-        tabs=st.tabs(['MRI slice viewer','Model attention','Performance graphs','Export summary'])
+        tabs=st.tabs(['MRI slice viewer','Model attention (not localisation)','Performance graphs','Export summary'])
         with tabs[0]:
             plane=st.selectbox('Viewer sequence',list(volumes),key='viewer_plane')
             v=volumes[plane];index=st.slider('MRI slice',0,len(v)-1,len(v)//2) if len(v)>1 else 0
@@ -310,66 +249,58 @@ with right:
             targets={f['finding']:f['key'] for f in result['findings']}
             label=st.selectbox('Finding to explain',list(targets));plane=st.selectbox('Attention sequence',list(volumes),key='cam_plane')
             key=targets[label]+'/'+plane
-            
-            # Enhanced attention visualization controls
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                show_combined = st.checkbox('Show combined multi-plane attention', value=False)
-            with col2:
-                attention_intensity = st.slider('Attention intensity', 0.5, 2.0, 1.0, 0.1)
-            with col3:
-                auto_play = st.checkbox('Auto-play through slices', value=False)
-            
             try:
-                if key not in st.session_state.attention_cache:
+                cached_attention=st.session_state.attention_cache.get(key)
+                expected_slices=len(cached_attention.get('indices',[])) if isinstance(cached_attention,dict) else 0
+                cache_is_current=(
+                    isinstance(cached_attention,dict)
+                    and cached_attention.get('schema_version')==2
+                    and isinstance(cached_attention.get('regions'),list)
+                    and len(cached_attention['regions'])==expected_slices
+                )
+                if not cache_is_current:
                     with st.spinner('Preparing model attention…'):
                         st.session_state.attention_cache[key]=get_predictor().explain(volumes,targets[label],plane)
                 attention=st.session_state.attention_cache[key]
-                
-                # Combined multi-plane attention
-                if show_combined and len(volumes) > 1:
-                    st.subheader('Combined Multi-Plane Attention')
-                    combined_attention = get_combined_attention(st.session_state.attention_cache, targets[label], volumes)
-                    if combined_attention is not None:
-                        idx=st.select_slider('Combined slice index',options=list(range(len(combined_attention['indices']))),
-                                           value=combined_attention['suggested_slice'],
-                                           format_func=lambda i:f"Slice {combined_attention['indices'][i]+1}",key='combined_cam_slice')
-                        a,b=st.columns(2)
-                        a.image(combined_attention['original'][idx],caption='Combined original MRI',use_container_width=True,clamp=True)
-                        # Apply intensity adjustment
-                        overlay = adjust_attention_intensity(combined_attention['overlay'][idx], attention_intensity)
-                        b.image(overlay,caption='Combined Grad-CAM attention',use_container_width=True,clamp=True)
-                
-                # Single plane attention with enhanced controls
-                st.subheader(f'{plane.title()} Plane Attention')
-                
-                # Slice selection with optional manual navigation
-                if auto_play:
-                    col_nav1, col_nav2, col_nav3 = st.columns([1, 1, 4])
-                    with col_nav1:
-                        if st.button('◀ Prev', key=f'prev_{key}'):
-                            current_idx = st.session_state.get(f'cam_slice_{key}', attention['suggested_slice'])
-                            prev_idx = max(0, current_idx - 1)
-                            st.session_state[f'cam_slice_{key}'] = prev_idx
-                            st.rerun()
-                    with col_nav2:
-                        if st.button('Next ▶', key=f'next_{key}'):
-                            current_idx = st.session_state.get(f'cam_slice_{key}', attention['suggested_slice'])
-                            next_idx = min(len(attention['indices']) - 1, current_idx + 1)
-                            st.session_state[f'cam_slice_{key}'] = next_idx
-                            st.rerun()
-                    idx = st.session_state.get(f'cam_slice_{key}', attention['suggested_slice'])
-                    st.caption(f"Slice {attention['indices'][idx]+1} of {len(attention['indices'])}")
-                else:
-                    idx=st.select_slider('Sampled MRI slice',options=list(range(len(attention['indices']))),value=attention['suggested_slice'],
-                                         format_func=lambda i:f"Slice {attention['indices'][i]+1}",key='cam_slice_'+key)
+                st.subheader(f'{plane.title()} plane score explanation')
+                st.caption('One sequence and one sampled slice are shown at a time. Cross-plane averaging is intentionally unavailable because an averaged overlay is not an anatomical view.')
+                idx=st.select_slider('Sampled MRI slice',options=list(range(len(attention['indices']))),value=attention['suggested_slice'],
+                                     format_func=lambda i:f"Slice {attention['indices'][i]+1}",key='cam_slice_'+key)
                 
                 a,b=st.columns(2)
                 a.image(attention['original'][idx],caption='Original MRI slice',use_container_width=True,clamp=True)
-                # Apply intensity adjustment
-                overlay = adjust_attention_intensity(attention['overlay'][idx], attention_intensity)
-                b.image(overlay,caption='Grad-CAM model attention',use_container_width=True,clamp=True)
-                
+                b.image(attention['overlay'][idx],caption='Grad-CAM positive contribution overlay',use_container_width=True,clamp=True)
+
+                finding=next((item for item in result['findings'] if item['key']==targets[label]),None)
+                probability=float(finding['probability']) if finding else None
+                regions=attention.get('regions') or []
+                region=regions[idx] if idx<len(regions) else {
+                    'available':False,
+                    'reason':'This attention view has no region summary. Please select the finding or sequence again to regenerate it.'
+                }
+                st.markdown('#### What this attention view means')
+                probability_text=f" The model score for this finding is {probability:.1%}." if probability is not None else ''
+                st.info(
+                    f"This overlay explains the model's **{label}** score on the **{plane.title()}** sequence, "
+                    f"shown at **slice {attention['indices'][idx]+1}**.{probability_text} "
+                    "Warmer pixels show image areas that contributed more positively to this selected score; they do not show a tear."
+                )
+                if region.get('available'):
+                    st.markdown(
+                        f"**Highest contribution area in this display:** {region['display_region'].capitalize()}. "
+                        f"The top part of this heatmap covers about {region['highlighted_area_percent']:.1f}% of the displayed image."
+                    )
+                    st.caption(
+                        f"Peak attention pixel: row {region['peak_pixel']['row']}, column {region['peak_pixel']['column']} "
+                        f"in this resized display. The displayed map was enlarged from a {attention.get('feature_map_size',('unknown','unknown'))[0]} × "
+                        f"{attention.get('feature_map_size',('unknown','unknown'))[1]} feature map, so it is coarse. These are image coordinates, not a named knee structure."
+                    )
+                else:
+                    st.info(region.get('reason','No concentrated Grad-CAM region is available for this slice.'))
+                st.warning(
+                    "Interpretation boundary: this is a coarse classifier explanation only. It does not confirm a tear, "
+                    "identify the exact tissue involved, provide a lesion boundary, estimate lesion size, or exclude pathology elsewhere in the study."
+                )
                 st.caption(attention['note'])
                 if not attention['has_positive_attention']:st.info('No positive Grad-CAM signal for this finding in this sequence. No region is highlighted.')
                 

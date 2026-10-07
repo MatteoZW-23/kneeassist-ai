@@ -33,6 +33,9 @@ def test_real_upload_predictions_gradcam_and_clear():
     attention=next(iter(at.session_state['attention_cache'].values()))
     assert attention['heatmaps'].ndim==3 and attention['original'].shape==attention['heatmaps'].shape
     assert attention['overlay'].shape[-1]==3
+    assert len(attention['regions'])==len(attention['heatmaps'])
+    assert any('This overlay explains the model' in item.value for item in at.info)
+    assert any('classifier explanation only' in item.value for item in at.warning)
     # Changing a case reference must discard the previous predictions.
     at.text_input[0].set_value('DIFFERENT-CASE').run()
     assert 'result' not in at.session_state

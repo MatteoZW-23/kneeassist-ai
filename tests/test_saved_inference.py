@@ -27,6 +27,10 @@ def test_saved_model_inference_attention_and_cpu_fallback():
     attention=predictor.explain(volumes,'acl','sagittal')
     assert np.isfinite(attention['heatmaps']).all() and np.isfinite(attention['overlay']).all()
     assert len(attention['indices'])==len(attention['heatmaps'])
+    assert len(attention['feature_map_size'])==2 and all(value > 0 for value in attention['feature_map_size'])
+    assert 'not confidence' in first['confidence_note'].lower()
+    assert 'do not localise' in first['attention_note'].lower()
+    assert 'calibrated measure of diagnostic uncertainty' in first['uncertainty_note']
     missing=predictor.predict({'sagittal':volumes['sagittal']})
     assert len(missing['missing_planes'])==2 and missing['incomplete_study_warning']
     cfg['training']['device']='cpu';cpu=Predictor(cfg=cfg).predict(volumes,'test')

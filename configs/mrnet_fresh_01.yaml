@@ -75,7 +75,7 @@ lifecycle:
   reset_requested: true
   deletion_completed: false
 external_fastmri:
-  archive: data/archives/knee_singlecoil_val.tar.xz
+  raw_source_status: Raw fastMRI source was archived outside the active project after import.
   root: data/external/fastMRI/images
   manifest: data/external/fastMRI/image_manifest.csv
   annotations: data/external/fastMRI-plus/knee.csv

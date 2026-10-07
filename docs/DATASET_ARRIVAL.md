@@ -1,7 +1,7 @@
 # fastMRI validation archive received
 
 Source supplied: C:/Users/HP/Desktop/knee_singlecoil_val.tar
-Project copy: data/archives/knee_singlecoil_val.tar.xz
+Active imported evaluation inputs: data/external/fastMRI/images. The raw source archive was moved recoverably outside the active project on 2026-10-03.
 The header identifies XZ compression, not an uncompressed TAR. The Desktop source was locked by another application, so it was copied rather than moved. It remains on the Desktop.
 
 The importer writes only regular HDF5 archive members into data/external/fastMRI/images, validates finite three-dimensional reconstructed images, and matches file IDs to the existing fastMRI+ annotation and reviewed-file lists. It writes progress to import_status.json and an inventory to image_manifest.csv. Full XZ stream integrity is checked before status becomes complete. The archive filename alone does not establish successful import.

@@ -88,19 +88,23 @@ class Predictor:
             threshold=self.thresholds[t['key']];positive=bool(p>=threshold);distances.append(abs(float(p)-threshold))
             
             # Calculate uncertainty metrics
-            uncertainty_level = 'Low' if std < 0.1 else 'Moderate' if std < 0.2 else 'High'
+            variation_band = 'small' if std < 0.1 else 'moderate' if std < 0.2 else 'large'
             
             findings.append({'key':t['key'],'finding':t['display'],'probability':float(p),
                              'threshold':threshold,'flagged':positive,
-                             'uncertainty':float(std),'uncertainty_level':uncertainty_level,
-                             'status':'Flagged for review' if positive else 'Below model threshold'})
+                             'uncertainty':float(std),'uncertainty_level':variation_band,
+                             'status':'Flagged for research review' if positive else 'Below research threshold'})
         missing=[p for p in self.model.planes if p not in volumes]
         margin=min(distances)
-        margin_label='High' if margin>=self.cfg['ui']['margin_high'] else 'Moderate' if margin>=self.cfg['ui']['margin_moderate'] else 'Low'
+        margin_label='far from threshold' if margin>=self.cfg['ui']['margin_high'] else 'moderately separated' if margin>=self.cfg['ui']['margin_moderate'] else 'near threshold'
         
         # Add uncertainty information to result
         avg_uncertainty = np.mean([f['uncertainty'] for f in findings])
-        uncertainty_summary = f"Average prediction uncertainty: {avg_uncertainty:.3f} ({'Low' if avg_uncertainty < 0.1 else 'Moderate' if avg_uncertainty < 0.2 else 'High'})"
+        uncertainty_summary = (
+            f"Exploratory MC-dropout score variation: {avg_uncertainty:.3f} "
+            f"({'small' if avg_uncertainty < 0.1 else 'moderate' if avg_uncertainty < 0.2 else 'large'}). "
+            "This variation is not a calibrated measure of diagnostic uncertainty or correctness."
+        )
         
         return {'system':'KneeAssist AI V1','case_reference':str(case_reference)[:120],
                 'created_at':datetime.now(timezone.utc).isoformat(),'architecture':self.architecture,
@@ -108,12 +112,12 @@ class Predictor:
                 'checkpoint_sha256':self.checkpoint_sha256,
                 'training_dataset':'MRNet-v1.0','findings':findings,'available_planes':list(volumes),
                 'missing_planes':missing,'sampled_slices':{p:v[2] for p,v in prepared.items()},
-                'model_confidence':'Not clinically established','score_separation':margin_label,
-                'confidence_note':'Score separation is distance from decision thresholds, not a probability that the model is correct.',
+                'model_confidence':'Not established for clinical use','score_separation':margin_label,
+                'confidence_note':'Distance from a research threshold is not confidence, reliability, or a probability that the model is correct.',
                 'probability_note':('Probabilities were calibrated on a small reserved MRNet development subset; clinical and external calibration are not established.' if self.calibration else 'Model probabilities are uncalibrated and are not validated estimates of clinical risk.'),
                 'uncertainty_note':uncertainty_summary,
                 'warning':'Decision-support output. Clinical review required. Below-threshold results do not rule out injury.',
-                'attention_note':'Heatmaps show model attention, not confirmed lesions.',
+                'attention_note':'Heatmaps show positive contribution to a selected model score. They do not localise or confirm lesions.',
                 'incomplete_study_warning':'Missing sequence performance has not been separately validated.' if missing else None}
 
     def explain(self,volumes,target,plane):
@@ -125,7 +129,7 @@ def text_summary(result):
     if result.get('checkpoint_sha256'):
         lines+=['Checkpoint SHA256: '+result['checkpoint_sha256'],'Training stage: '+result.get('training_stage','unspecified'),'']
     for f in result['findings']:
-        uncertainty_info = f" (±{f['uncertainty']:.3f}, {f['uncertainty_level']} uncertainty)" if 'uncertainty' in f else ""
+        uncertainty_info = f" (MC-dropout variation ±{f['uncertainty']:.3f}, {f['uncertainty_level']})" if 'uncertainty' in f else ""
         lines.append(f"{f['finding']}: {f['probability']:.1%} — {f['status']} (threshold {f['threshold']:.2f}){uncertainty_info}")
     lines+=['',f"Score separation: {result['score_separation']}",f"Model confidence: {result['model_confidence']}",
             result['confidence_note'],result['probability_note'],'']

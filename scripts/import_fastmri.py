@@ -1,7 +1,18 @@
 from pathlib import Path
+import argparse
 import tarfile,lzma,shutil,json,hashlib
 import h5py,numpy as np,pandas as pd
-root=Path(__file__).resolve().parents[1];arc=root/'data/archives/knee_singlecoil_val.tar.xz';out=root/'data/external/fastMRI';out.mkdir(exist_ok=True);vol=out/'images';vol.mkdir(exist_ok=True)
+parser = argparse.ArgumentParser(description='Import a fastMRI single-coil archive into the external evaluation folder.')
+parser.add_argument('--archive', type=Path, required=True, help='Path to the original knee_singlecoil_val.tar.xz source archive.')
+args = parser.parse_args()
+root = Path(__file__).resolve().parents[1]
+arc = args.archive.expanduser().resolve()
+if not arc.is_file():
+    raise FileNotFoundError(f'fastMRI source archive was not found: {arc}')
+out = root / 'data/external/fastMRI'
+out.mkdir(exist_ok=True)
+vol = out / 'images'
+vol.mkdir(exist_ok=True)
 labels=pd.read_csv(root/'data/external/fastMRI-plus/knee.csv');reviewed=set((root/'data/external/fastMRI-plus/knee_file_list.csv').read_text().splitlines());rows=[]
 with lzma.open(arc,'rb') as stream:
  with tarfile.open(fileobj=stream,mode='r|') as tar:

@@ -34,6 +34,8 @@ Equivalent launch command:
 
 Upload a NumPy stack, NIfTI volume, DICOM slices, or a study ZIP. Each processed array must be a finite numeric MRI volume shaped slices x height x width. The intake panel reports file type, shape, dimensions, slice count, datatype, intensity range and orientation evidence before inference. It prioritises DICOM geometry and NIfTI affine evidence. A processed NPY array with no anatomical metadata, such as `0000.npy`, requires a manual plane confirmation; the filename is not treated as proof of orientation. The app supports one- or two-plane studies and warns when planes are missing. Enter a pseudonymous case reference and select Analyse study. View the scores, slice viewer and Grad-CAM; export the summary as text or JSON. Clear current case resets the session. No example MRI study is included in the GitHub release.
 
+For each Grad-CAM view, the dashboard states the selected finding, MRI sequence and slice number. It describes the strongest heatmap concentration only in displayed-image coordinates, such as “upper-right area of the displayed image.” Warm colours show regions that contributed positively to that selected model score. The map is generated at low feature-map resolution and enlarged for display, so it is coarse. It does not identify a named knee structure, confirm a tear, define a lesion boundary, estimate lesion size or exclude pathology elsewhere in the study. The dashboard intentionally does not average attention across planes or let a user artificially intensify the overlay.
+
 JPEG/PNG picture uploads, internet scan screenshots, knee photographs and X-rays do not receive predictions. File checks cannot establish anatomy, patient identity, mixed-patient archives, acquisition suitability, or clinical validity. NIfTI and direct DICOM support are technically inspected and converted in memory, but have not been clinically validated against the MRNet-trained model.
 
 ## Smart input and model selection
@@ -84,7 +86,7 @@ Standalone inference uses the active checkpoint:
 .\.venv\Scripts\python.exe -m src.inference.predictor sample_cases/mrnet_1130.zip --case EXAMPLE --json
 ```
 
-Evaluation saves per-target and macro AUROC, F1, sensitivity, specificity, precision and accuracy; confusion matrices, ROC/precision-recall curves, training curves and prespecified prediction/attention examples. The selected run's `results` directory contains these artifacts. `results/model_comparison.json` records the selection. Checkpoint metadata identifies its dataset, architecture, configuration and training stage. Saved probabilities do not establish confidence that a diagnosis is correct.
+Evaluation saves per-target and macro AUROC, F1, sensitivity, specificity, precision and accuracy; confusion matrices, ROC/precision-recall curves, training curves and prespecified prediction/attention examples. The selected run's `results` directory contains these artifacts. `results/model_comparison.json` records the selection. Checkpoint metadata identifies its dataset, architecture, configuration and training stage. Saved probabilities, threshold distance and exploratory MC-dropout variation do not establish confidence that a diagnosis is correct.
 
 ## Project map
 
