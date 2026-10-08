@@ -1,4 +1,6 @@
-# KneeAssist AI — evaluation
+> **Historical benchmark record.** This report describes the pre-routing model-family benchmark. The current live routing registry is `model_registry/active_models.json`.
+
+# KneeAssist XAI — historical model-family evaluation
 
 Selected architecture: **efficientnet_b0**. Selected checkpoint stage: frozen_encoder. Experiment mode: frozen_encoder_family_benchmark.
 

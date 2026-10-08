@@ -1,6 +1,7 @@
 import numpy as np
 import csv
 import pytest
+import torch
 from src.utils import ROOT,config
 from src.inference.predictor import Predictor
 from src.data.preprocessing import load_uploads
@@ -36,3 +37,23 @@ def test_saved_model_inference_attention_and_cpu_fallback():
     cfg['training']['device']='cpu';cpu=Predictor(cfg=cfg).predict(volumes,'test')
     c=np.array([f['probability'] for f in cpu['findings']])
     assert np.allclose(a,c,atol=.01)
+
+def test_mc_dropout_is_exploratory_and_preserves_deterministic_scores():
+    cfg=config(); raw=(ROOT/'sample_cases/mrnet_1130.zip').read_bytes()
+    volumes=load_uploads([('study.zip',raw)],cfg['preprocessing'])
+    predictor=Predictor(cfg=cfg)
+    baseline=predictor.predict(volumes,'test',uncertainty_samples=1)
+    buffers=[module.running_mean.detach().clone() for module in predictor.model.modules()
+             if hasattr(module,'running_mean') and module.running_mean is not None]
+    exploratory=predictor.predict(volumes,'test',uncertainty_samples=3)
+    after=[module.running_mean.detach().clone() for module in predictor.model.modules()
+           if hasattr(module,'running_mean') and module.running_mean is not None]
+    base_scores=np.array([item['probability'] for item in baseline['findings']])
+    exploratory_scores=np.array([item['probability'] for item in exploratory['findings']])
+    assert np.allclose(base_scores, exploratory_scores, atol=1e-7)
+    assert [item['flagged'] for item in baseline['findings']] == [item['flagged'] for item in exploratory['findings']]
+    assert all(torch.equal(before, later) for before,later in zip(buffers,after))
+    assert all(not module.training for module in predictor.model.modules() if isinstance(module, torch.nn.modules.batchnorm._BatchNorm))
+    assert exploratory['scoring_mode']=='deterministic_calibrated_eval'
+    assert 'does not change the deterministic calibrated score' in exploratory['uncertainty_note']
+

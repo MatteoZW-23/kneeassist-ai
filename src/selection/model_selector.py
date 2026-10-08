@@ -14,8 +14,26 @@ def load_registry(path=None):
     return registry
 
 
+METRIC_ALIASES = {
+    # Older evidence used the generic PR-AUC label even though calculate() stores
+    # sklearn average precision. Keep old registries readable but use the stored
+    # metric field for every new selection.
+    'pr_auc': 'average_precision',
+}
+
+
+def metric_value(metrics, name):
+    """Return a validated metric, including the legacy PR-AUC alias."""
+    if name in metrics:
+        return float(metrics[name])
+    alias = METRIC_ALIASES.get(name)
+    if alias and alias in metrics:
+        return float(metrics[alias])
+    raise ValueError(f"Selection policy metric '{name}' is missing from registered validation evidence.")
+
+
 def _score(metrics, weights):
-    return sum(float(metrics.get(key,0.0))*float(weight) for key,weight in weights.items())
+    return sum(metric_value(metrics, key) * float(weight) for key, weight in weights.items())
 
 
 def select_models(available_planes, targets, path=None):

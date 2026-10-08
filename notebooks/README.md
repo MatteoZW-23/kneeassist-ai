@@ -1,6 +1,6 @@
-# KneeAssist AI notebooks
+# KneeAssist XAI notebooks
 
-Run with the KneeAssist AI Jupyter kernel. Notebooks read the active deployment config; notebook 08 shows the completed experiment and its limitations.
+Run with the KneeAssist XAI Jupyter kernel. The notebooks preserve the formal ResNet-18 versus EfficientNet-B0 baseline experiment; the active dashboard routing is documented in `../model_registry/active_models.json` and `../models/MODEL_CARD.md`. Notebook 08 records the completed experiment and its limitations.
 
 - [00 Setup and Dataset Checks](00_Setup_and_Dataset_Checks.ipynb)
 - [01 Train MRI Models ResNet18 and EfficientNetB0](01_Train_MRI_Models_ResNet18_and_EfficientNetB0.ipynb)

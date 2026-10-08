@@ -21,7 +21,7 @@ class StudyModel(nn.Module):
         self.encoder,self.channels=factory[architecture](pretrained)
         self.encoder.requires_grad_(False);self.encoder.eval()
         self.encoder_chunk_size=cfg['model'].get('encoder_chunk_size',4)
-        self.planes=cfg['preprocessing']['planes'];self.plane_dim=2*self.channels
+        self.planes=cfg['preprocessing']['planes']
         self.aggregation_method=cfg['model'].get('aggregation_method','mean_max')
         
         # Initialize attention modules if needed
@@ -30,15 +30,18 @@ class StudyModel(nn.Module):
             for plane in self.planes:
                 self.attention_modules[plane]=AttentionAggregation(self.channels)
         
-        # Calculate feature dimension based on aggregation method
-        if self.aggregation_method=='mean_max':
-            dim=self.plane_dim*len(self.planes)
-        elif self.aggregation_method=='attention':
-            dim=self.channels*len(self.planes)  # attention + max
-        elif self.aggregation_method=='mean_max_attention':
-            dim=3*self.channels*len(self.planes)  # mean + max + attention
-        else:
-            dim=self.plane_dim*len(self.planes)  # fallback to original
+        # ``aggregate`` returns two channel vectors for mean/max and attention
+        # pooling, and three for mean/max/attention pooling.  Keep this value
+        # consistent with both the classifier head and missing-plane padding.
+        plane_dims = {
+            'mean_max': 2 * self.channels,
+            'attention': 2 * self.channels,
+            'mean_max_attention': 3 * self.channels,
+        }
+        if self.aggregation_method not in plane_dims:
+            raise ValueError(f"Unsupported aggregation method: {self.aggregation_method}")
+        self.plane_dim=plane_dims[self.aggregation_method]
+        dim=self.plane_dim*len(self.planes)
             
         self.register_buffer('feature_mean',torch.zeros(dim))
         self.register_buffer('feature_std',torch.ones(dim))
@@ -74,15 +77,8 @@ class StudyModel(nn.Module):
                     features.append(aggregated)
                 mask.append(1.)
             else:
-                # Handle missing planes with appropriate zero padding
-                if self.aggregation_method=='mean_max':
-                    features.append(torch.zeros(self.plane_dim,device=exemplar.device))
-                elif self.aggregation_method=='attention':
-                    features.append(torch.zeros(self.channels*2,device=exemplar.device))  # attention + max
-                elif self.aggregation_method=='mean_max_attention':
-                    features.append(torch.zeros(self.channels*3,device=exemplar.device))  # mean + max + attention
-                else:
-                    features.append(torch.zeros(self.plane_dim,device=exemplar.device))
+                # Missing planes always reserve the exact per-plane feature size.
+                features.append(torch.zeros(self.plane_dim,device=exemplar.device))
                 mask.append(0.)
         return torch.cat(features),torch.tensor(mask,device=exemplar.device)
 

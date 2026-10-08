@@ -1,10 +1,10 @@
-# KneeAssist AI Fourth Year Project Proposal
+# KneeAssist XAI Fourth Year Project Proposal
 
 ## Proposed title
 
-**KneeAssist AI Development of a Deep Learning System for Study Level Classification of Normal and Abnormal Knee MRI Studies**
+**KneeAssist XAI Development of an Explainable Deep Learning System for Study Level Classification of Normal and Abnormal Knee MRI Studies**
 
-This title is narrow enough for a fourth-year data-science project. It states the method, the imaging modality, the unit of analysis and the binary classification task. KneeAssist AI is the system name; the academic contribution is the deep-learning study-level classification system.
+This title is narrow enough for a fourth-year data-science project. It states the method, the imaging modality, the unit of analysis and the binary classification task. KneeAssist XAI is the system name; the academic contribution is the deep-learning study-level classification system with Grad-CAM attention and transparent model-selection evidence.
 
 ## Problem statement
 
@@ -16,11 +16,11 @@ To develop a deep-learning system for study-level classification of normal and a
 
 ## Specific objectives
 
-1. To prepare and organise publicly available knee MRI studies for normal and abnormal classification.
-2. To preprocess knee MRI studies using resizing, within-study normalisation and training-only augmentation.
-3. To develop and compare deep-learning models for classifying knee MRI studies as normal or abnormal.
-4. To evaluate the selected model using AUROC, accuracy, precision, recall, F1-score, specificity and a confusion matrix.
-5. To develop a simple KneeAssist AI prototype for uploading a supported MRI study and displaying the classification result with a confidence score.
+1. To develop a Streamlit-based KneeAssist XAI prototype that displays predictions, MRI slices, Grad-CAM attention and an exportable research summary.
+2. To prepare and preprocess knee MRI studies for deep-learning classification using normalisation, slice sampling and data-quality checks.
+3. To develop a transfer-learning model for automated study-level classification of normal and abnormal knee MRI studies.
+4. To compare ResNet-18 and EfficientNet-B0 models and select the better model using validation AUROC.
+5. To evaluate the selected model against available MRI reference labels using accuracy, sensitivity, specificity, precision, F1-score and AUROC.
 
 ## Scope
 

@@ -2,7 +2,7 @@
 
 The active project stores only data needed for its current workflow:
 
-- `../MRNet-v1.0`: the supervised MRNet training and validation studies used by the active checkpoint.
+- `../MRNet-v1.0`: the supervised MRNet training and validation studies used by the historical formal baseline and active routing study.
 - `../external/KneeMRI`: retained external ACL evaluation cohort.
 - `../external/fastMRI`: retained exploratory meniscus evaluation inputs.
 

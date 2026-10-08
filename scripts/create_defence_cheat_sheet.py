@@ -175,7 +175,7 @@ def main() -> None:
         ["2. Intake checks", "The app checks file type, readable content, dimensions, slice count and available plane metadata.", "This prevents common malformed-input errors. It cannot prove anatomy, patient identity or clinical suitability."],
         ["3. Plane confirmation", "Axial, coronal and sagittal orientation is read from reliable metadata where available. Metadata-free arrays require manual confirmation.", "Plane affects how the model interprets image structure. Filenames alone are not trusted."],
         ["4. Preprocessing", "Each sequence is normalised using the 1st and 99th intensity percentiles, resized to 224 × 224 and sampled to 12 slices per plane.", "This makes input dimensions and intensity scale consistent with training."],
-        ["5. Encoder", "An ImageNet-pretrained EfficientNet-B0 encoder converts every sampled MRI slice into image features.", "Transfer learning gives the model useful image representations before MRI-specific fitting."],
+        ["5. Encoder", "ImageNet-pretrained encoders convert sampled MRI slices into image features. The current dashboard routes DenseNet-121 to general abnormality, ResNet-18 to ACL and Swin-T to meniscus.", "Transfer learning gives the model useful image representations before MRI-specific fitting."],
         ["6. Study aggregation", "Mean and maximum pooling combine slice features within each plane; plane masks show which sequences were supplied.", "The prediction represents the study, not an individual slice."],
         ["7. Output", "A multi-label head produces three independent scores: general abnormality, ACL tear and meniscal tear. Calibrated research thresholds determine the research-review flag.", "Several findings can be positive at the same time; the threshold is not a clinical rule."],
         ["8. Explanation", "Grad-CAM overlays positive contribution to a selected score on one selected sequence and sampled slice.", "It supports inspection of model behaviour, but is not lesion localisation."],
@@ -188,16 +188,16 @@ def main() -> None:
         ["Leakage control", "The project uses study-level separation and exact-series checks. Patient linkage was unavailable, so I cannot claim patient-level independence."],
         ["Class imbalance", "Weighted BCEWithLogitsLoss gives more importance to minority positive labels during fitting."],
         ["Training choices", "Fixed random seed, ImageNet-pretrained encoders, AdamW, learning-rate scheduling, early stopping, checkpoint saving and CUDA mixed precision where available."],
-        ["Model selection", "ResNet-18 and EfficientNet-B0 were compared using internal-tuning macro AUROC. EfficientNet-B0 was selected. The later five-model benchmark did not replace the active checkpoint."],
+        ["Model selection", "ResNet-18 and EfficientNet-B0 were compared using internal-tuning macro AUROC; EfficientNet-B0 is the formal historical baseline. The later portfolio supplies fixed live routes: DenseNet-121 for general abnormality, ResNet-18 for ACL and Swin-T for meniscus."],
     ], [1.45, 5.65])
 
     add_heading(doc, "5. Dashboard walkthrough: explain every visible part", 1)
     add_table(doc, ["Dashboard area", "What it does", "How to explain it in defence"], [
         ["Research warning", "Appears at the top of the app.", "It sets the intended use: this is research decision support, not autonomous diagnosis."],
-        ["Model evidence and supported inputs", "Shows active checkpoint evidence and supported file types.", "It makes provenance visible and states that technical file checks are not clinical validation."],
+        ["Model evidence and supported inputs", "Shows active target-routing evidence, formal baseline provenance and supported file types.", "It makes provenance visible and states that technical file checks are not clinical validation."],
         ["Add a study", "Accepts NPY, NIfTI, DICOM and ZIP study files plus a case reference.", "JPEG/PNG, X-rays and internet screenshots are rejected because the model was not trained or validated on them."],
         ["Study intake", "Lists type, shape, detected plane, confidence and status; asks for manual plane confirmation if needed.", "The app avoids silently guessing orientation when metadata is missing."],
-        ["Analyse study", "Loads the compatible registered checkpoint, preprocesses the MRI and calculates study-level scores.", "The registry currently has one compatible validated research checkpoint, so this is safe routing rather than a fake multi-model ensemble."],
+        ["Analyse study", "Loads the three compatible registered target models, preprocesses the MRI and calculates study-level scores.", "The registry has three fixed validated research routes. Each finding is assigned before scoring; this is target routing rather than a weighted ensemble or patient-specific winner selection."],
         ["Research scores", "Shows each probability, research threshold and research-review status.", "A probability is a model output, not the chance that a patient has a confirmed diagnosis."],
         ["Distance from threshold", "Shows whether a score is near or far from a research threshold.", "It is not confidence or reliability. A far score can still be wrong on an unfamiliar scanner or population."],
         ["MC-dropout variation", "Shows how much repeated dropout predictions vary.", "It is exploratory score variation, not calibrated diagnostic uncertainty."],
@@ -248,7 +248,7 @@ def main() -> None:
         ("Why are external results weaker?", "The external data differ in acquisition, labels and available planes. This domain shift is evidence that MRNet-only training does not prove generalisation."),
         ("Is Grad-CAM a detection method?", "No. It explains a classifier score. Detection needs labelled bounding boxes; segmentation needs labelled masks. Neither is implemented or claimed."),
         ("Why reject JPEG or PNG images?", "A single screenshot loses the study structure and differs from the MRI volumes used in training. Accepting it would create unsupported predictions."),
-        ("What does the dashboard model-selection panel do?", "It checks the registry for a compatible checkpoint and shows its evidence. There is currently one active validated research checkpoint, so it does not pretend to choose among unvalidated algorithms."),
+        ("What does the dashboard model-selection panel do?", "It checks the registry for compatible prevalidated routes and shows their evidence. It assigns DenseNet-121 to general abnormality, ResNet-18 to ACL and Swin-T to meniscus before scoring, without using patient scores to choose a model."),
         ("What are the project limitations?", "MRNet-only supervised training, no patient linkage, one seed, reused development evaluation, limited external references, no clinical reader study, no lesion labels and no clinical validation."),
         ("What would you do next?", "Lock the model and thresholds, obtain an independent patient-level multi-site dataset with qualified reference labels, evaluate calibration and subgroups, then conduct reader and workflow studies."),
     ]

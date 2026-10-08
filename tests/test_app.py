@@ -29,6 +29,10 @@ def test_real_upload_predictions_gradcam_and_clear():
     result=at.session_state['result']
     assert len(result['findings'])==3 and result['case_reference']=='UI-VALIDATION-1130'
     assert len(at.metric)==3 and len(at.download_button)==2
+    # Attention generation is explicit so a failed visual explanation cannot
+    # interrupt ordinary prediction review.
+    button(at,'Generate attention map').click().run()
+    assert not at.exception and not at.error
     assert at.session_state['attention_cache']
     attention=next(iter(at.session_state['attention_cache'].values()))
     assert attention['heatmaps'].ndim==3 and attention['original'].shape==attention['heatmaps'].shape

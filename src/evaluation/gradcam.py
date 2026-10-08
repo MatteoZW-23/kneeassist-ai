@@ -41,6 +41,42 @@ def describe_attention_region(heatmap):
     }
 
 
+def is_valid_attention_payload(payload):
+    """Validate the parallel arrays stored in the Streamlit Grad-CAM cache.
+
+    The cache is browser-session state, so an older payload must be rejected
+    rather than indexed after application code changes.
+    """
+    if not isinstance(payload, dict) or payload.get("schema_version") != 2:
+        return False
+    indices = payload.get("indices")
+    regions = payload.get("regions")
+    if not isinstance(indices, (list, tuple)) or not isinstance(regions, list) or not indices:
+        return False
+    try:
+        original = np.asarray(payload["original"])
+        heatmaps = np.asarray(payload["heatmaps"])
+        overlay = np.asarray(payload["overlay"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    slice_count = len(indices)
+    if (
+        original.ndim != 3
+        or heatmaps.ndim != 3
+        or overlay.ndim != 4
+        or original.shape != heatmaps.shape
+        or overlay.shape != original.shape + (3,)
+        or original.shape[0] != slice_count
+        or len(regions) != slice_count
+        or not np.isfinite(original).all()
+        or not np.isfinite(heatmaps).all()
+        or not np.isfinite(overlay).all()
+    ):
+        return False
+    suggested = payload.get("suggested_slice")
+    return isinstance(suggested, (int, np.integer)) and not isinstance(suggested, bool) and 0 <= int(suggested) < slice_count
+
+
 def explain(predictor,volumes,target,plane):
     keys=[t['key'] for t in predictor.model_cfg['targets']]
     if target not in keys or plane not in volumes:raise InputError('Choose an available sequence and a supported finding.')
@@ -52,9 +88,12 @@ def explain(predictor,volumes,target,plane):
         if p not in tensors:
             features.append(torch.zeros(model.plane_dim,device=predictor.device));mask.append(0.);continue
         with torch.no_grad(),torch.autocast(device_type=predictor.device.type,enabled=False):maps=model.encoder(tensors[p].float())
+        attention_module = model.attention_modules[p] if "attention" in model.aggregation_method else None
         if p==plane:
-            activation=maps.detach().float().requires_grad_(True);f=aggregate(activation)
-        else:f=aggregate(maps.float()).detach()
+            activation=maps.detach().float().requires_grad_(True)
+            f=aggregate(activation, method=model.aggregation_method, attention_module=attention_module)
+        else:
+            f=aggregate(maps.float(), method=model.aggregation_method, attention_module=attention_module).detach()
         features.append(f);mask.append(1.)
     vector=torch.cat(features).unsqueeze(0);m=torch.tensor([mask],device=predictor.device)
     # Float32 head gradients avoid underflow in weak attention signals.

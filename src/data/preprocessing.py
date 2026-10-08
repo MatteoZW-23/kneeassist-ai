@@ -22,7 +22,15 @@ except ImportError:  # NIfTI support is optional until dependencies are installe
 class InputError(ValueError):
     pass
 
+
+def input_config(cfg):
+    """Accept both legacy flat intake settings and config.yaml's nested settings."""
+    nested = cfg.get('preprocessing', {}) if isinstance(cfg, dict) else {}
+    return {**cfg, **nested} if nested else cfg
+
+
 def validate_volume(v, cfg):
+    cfg = input_config(cfg)
     if not isinstance(v,np.ndarray) or v.ndim!=3:
         raise InputError('Each MRI sequence must be a 3D NumPy array: slices × height × width.')
     if v.dtype.kind not in 'uif' or not np.isfinite(v).all():
@@ -34,6 +42,7 @@ def validate_volume(v, cfg):
     return v
 
 def safe_npy(data, cfg):
+    cfg = input_config(cfg)
     if len(data)>cfg['max_upload_mb']*1024**2:
         raise InputError('The file exceeds the configured upload limit.')
     try:
@@ -69,8 +78,14 @@ def _plane_from_path(name, planes, override=None, allow_unknown=False):
         raise InputError('Name each sequence axial, coronal, or sagittal, or place it in that plane folder.')
     return path,matches[0]
 
+
+def _upload_identifier(name, index):
+    """Return a stable per-upload identifier even when browser filenames repeat."""
+    return f"upload-{int(index)}::{name}"
+
 def _nifti_volume(data, cfg, compressed=False):
     """Read a NIfTI study in memory and derive only a cautious plane suggestion."""
+    cfg = input_config(cfg)
     if nib is None:
         raise InputError('NIfTI support is unavailable because nibabel is not installed. Re-run Install.cmd, then restart KneeAssist AI.')
     if len(data)>cfg['max_upload_mb']*1024**2:
@@ -140,6 +155,7 @@ def _dicom_text_plane(dataset, planes):
 
 def safe_dicom_study(entries, cfg, overrides=None, require_declared=False):
     """Read DICOM slices in memory using geometry before names and metadata hints."""
+    cfg = input_config(cfg)
     if pydicom is None:
         raise InputError('DICOM support is unavailable because pydicom is not installed. Re-run Install.cmd, then restart KneeAssist AI.')
     groups={}
@@ -187,6 +203,7 @@ def _file_kind(name):
 
 def load_uploads(files, cfg, plane_overrides=None):
     """Read one MRI study in memory. Metadata takes precedence over filename hints."""
+    cfg = input_config(cfg)
     planes=cfg['planes'];volumes={};overrides=plane_overrides or {};dicom_entries=[]
     def add(name, raw, key=None):
         _,plane=_plane_from_path(name,planes,overrides.get(key or name) or overrides.get(name),allow_unknown=True)
@@ -197,12 +214,20 @@ def load_uploads(files, cfg, plane_overrides=None):
     def add_nifti(name,raw,key=None):
         volume,details=_nifti_volume(raw,cfg,compressed=_file_kind(name)=='nifti_gz')
         _,declared=_plane_from_path(name,planes,overrides.get(key or name) or overrides.get(name),allow_unknown=True)
-        plane=declared or details['plane']
+        metadata_plane=details['plane']
+        if (metadata_plane is not None and declared is not None
+                and details['confidence'] >= 0.6 and metadata_plane != declared):
+            raise InputError(
+                f"NIfTI orientation for {PurePosixPath(name).name} is {metadata_plane}, but its filename, folder, "
+                f"or supplied plane declares {declared}. Correct the conflicting plane information and try again."
+            )
+        plane=metadata_plane or declared
         if plane is None or (details['confidence']<0.6 and declared is None):
             raise InputError(f'Plane for {PurePosixPath(name).name} is uncertain from NIfTI orientation. Confirm it in the intake panel.')
         if plane in volumes: raise InputError(f'More than one {plane} stack was supplied. Upload one study at a time.')
         volumes[plane]=volume
-    for name,raw in files:
+    for upload_index,(name,raw) in enumerate(files):
+        upload_key=_upload_identifier(name,upload_index)
         kind=_file_kind(name)
         if kind=='zip':
             try:
@@ -214,20 +239,20 @@ def load_uploads(files, cfg, plane_overrides=None):
                     kinds={_file_kind(i.filename) for i in items}
                     if kinds=={'npy'}:
                         if len(items)>3: raise InputError('A NumPy study ZIP must contain at most three MRI stacks.')
-                        for i in items:add(i.filename,z.read(i),f'{name}::{i.filename}')
+                        for i in items:add(i.filename,z.read(i),f'{upload_key}::{i.filename}')
                     elif kinds=={'dcm'}:
                         if len(items)>cfg.get('max_dicom_files',768): raise InputError('The DICOM ZIP contains too many files.')
                         if volumes or dicom_entries: raise InputError('Upload one MRI study at a time; do not mix DICOM and processed arrays.')
-                        dicom_entries.extend((i.filename,z.read(i),f'{name}::{i.filename}') for i in items)
+                        dicom_entries.extend((i.filename,z.read(i),f'{upload_key}::{i.filename}') for i in items)
                     elif kinds.issubset({'nifti','nifti_gz'}):
                         if len(items)>3: raise InputError('A NIfTI study ZIP must contain at most three MRI volumes.')
-                        for i in items:add_nifti(i.filename,z.read(i),f'{name}::{i.filename}')
+                        for i in items:add_nifti(i.filename,z.read(i),f'{upload_key}::{i.filename}')
                     else:
                         raise InputError('A study ZIP must contain only one supported MRI type: .npy, .nii/.nii.gz, or .dcm slices.')
             except (zipfile.BadZipFile,RuntimeError) as e: raise InputError('The study ZIP is corrupt or encrypted.') from e
-        elif kind=='npy': add(name,raw)
-        elif kind in ('nifti','nifti_gz'): add_nifti(name,raw)
-        elif kind=='dcm': dicom_entries.append((name,raw,name))
+        elif kind=='npy': add(name,raw,upload_key)
+        elif kind in ('nifti','nifti_gz'): add_nifti(name,raw,upload_key)
+        elif kind=='dcm': dicom_entries.append((name,raw,upload_key))
         else: raise InputError('Supported inputs are .npy, .nii, .nii.gz, .dcm, or a ZIP containing one supported MRI study. JPEG/PNG are not supported.')
     if dicom_entries:
         if volumes: raise InputError('Upload one MRI study at a time; do not mix DICOM and processed arrays.')

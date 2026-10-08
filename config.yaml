@@ -1,4 +1,4 @@
-project_name: KneeAssist AI
+project_name: KneeAssist XAI
 seed: 42
 dataset:
   name: MRNet-v1.0
@@ -6,6 +6,7 @@ dataset:
   manifest: data/mrnet_manifest.csv
   splits: runs/mri_finetune_02/splits.json
   patient_mapping: null
+# Default target thresholds are baseline fallbacks; routed inference uses the per-target thresholds in model_registry/active_models.json.
 targets:
 - key: abnormal
   display: General Abnormality
@@ -31,6 +32,8 @@ preprocessing:
   - coronal
   - sagittal
 model:
+  # Formal baseline-training candidates. Live inference is governed by model_registry/active_models.json.
+  active_registry: model_registry/active_models.json
   architectures:
   - resnet18
   - efficientnet_b0
@@ -39,7 +42,7 @@ model:
   encoder_precision: float32
   training_mode: staged_final_blocks
   pooling: mean_max
-  aggregation_method: mean_max  # Options: 'mean_max', 'attention', 'mean_max_attention'
+  aggregation_method: mean_max  # Locked to the aggregation method used by all saved research checkpoints.
   hidden_dim: 128
   dropout: 0.5
   encoder_chunk_size: 4
@@ -62,6 +65,7 @@ training:
   gradient_accumulation: 4
   encoder_learning_rate: 1.0e-05
 evaluation:
+  # Historical EfficientNet-B0 fallback used only by standalone baseline scripts; Streamlit uses model_registry/active_models.json.
   threshold_selection: reserved_calibration_youden
   checkpoint: models/best_model.pth
   directory: runs/mri_finetune_02/results
@@ -95,3 +99,5 @@ paths:
   models: models
   features: runs/mrnet_fresh_01/features
 run_directory: runs/mri_finetune_02
+
+

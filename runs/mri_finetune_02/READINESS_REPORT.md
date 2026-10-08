@@ -1,8 +1,10 @@
-# KneeAssist AI: ready for research testing
+# Historical EfficientNet-B0 baseline: ready for research testing
+
+> **Superseded deployment note (8 October 2026):** this report preserves the original single-model EfficientNet-B0 evidence. The current dashboard uses the reviewed target-routed registry described in `../../models/MODEL_CARD.md` and evaluated in `../model_portfolio_v1/final/metrics.json`. The routed result is still MRNet development evidence, not clinical validation.
 
 Verified 28 September 2026, with a 30 September follow-up. The application, selected checkpoint, real MRI upload, prediction, Grad-CAM, JSON download, case clearing and readable empty-input error were verified. The guarded DICOM ZIP importer has dedicated input-safety tests. After the guarded ensemble and localisation additions, the 30 September full suite passed 33 tests; nine notebooks were previously executed and verified. JPEG/PNG preview has been removed.
 
-The 30 September five-model benchmark also completed. Its best new candidate, frozen-encoder EfficientNet-B0 (internal-tuning macro AUROC 0.8472), did not beat the active calibrated baseline (0.8478). It was not promoted. See `../model_family_v2/FINAL_DECISION.md` and `../model_family_v2/FINAL_VERIFICATION.md`.
+The 30 September five-model benchmark also completed. Its best new candidate, frozen-encoder EfficientNet-B0 (internal-tuning macro AUROC 0.8472), did not beat the historical calibrated baseline (0.8478). It was not promoted. See `../model_family_v2/FINAL_DECISION.md` and `../model_family_v2/FINAL_VERIFICATION.md`.
 
 ## Honest performance conclusion
 
@@ -44,3 +46,4 @@ The system supports MRI NumPy slice stacks, NIfTI `.nii`/`.nii.gz` volumes, dire
 - browser_export_verified.json and browser_attention_verified.png: live workflow evidence
 
 Checkpoint SHA256: `b60293f6c7130fd646c81b6d758584faf3e17b2689503b5278ad711156d546da`
+

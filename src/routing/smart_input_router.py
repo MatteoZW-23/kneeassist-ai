@@ -6,8 +6,8 @@ from pathlib import PurePosixPath
 import numpy as np
 
 from src.data.preprocessing import (
-    InputError, _dicom_plane, _dicom_text_plane, _file_kind, _nifti_volume,
-    _plane_from_path, pydicom, safe_npy,
+    InputError, input_config, _dicom_plane, _dicom_text_plane, _file_kind, _nifti_volume,
+    _plane_from_path, _upload_identifier, pydicom, safe_npy,
 )
 
 
@@ -42,6 +42,13 @@ def _npy_descriptor(identifier, name, raw, cfg):
 
 def _nifti_descriptor(identifier, name, raw, cfg):
     values,details=_nifti_volume(raw,cfg,compressed=_file_kind(name)=='nifti_gz')
+    _,hint=_plane_from_path(name,cfg['planes'],allow_unknown=True)
+    if (details['plane'] is not None and hint is not None
+            and details['confidence'] >= 0.6 and details['plane'] != hint):
+        raise InputError(
+            f"NIfTI orientation for {PurePosixPath(name).name} is {details['plane']}, but its filename or folder "
+            f"declares {hint}. Correct the conflicting plane information and try again."
+        )
     return _array_descriptor(identifier,name,values,'NIfTI MRI volume',details['plane'],
                              details['confidence'],details['method'])
 
@@ -69,12 +76,14 @@ def _dicom_descriptor(identifier, name, raw, cfg):
 
 def inspect_uploads(files, cfg):
     """Return file facts and cautious plane evidence without running a model."""
+    cfg=input_config(cfg)
     descriptors=[]
-    for name,raw in files:
+    for upload_index,(name,raw) in enumerate(files):
+        upload_id=_upload_identifier(name,upload_index)
         kind=_file_kind(name)
-        if kind=='npy': descriptors.append(_npy_descriptor(name,name,raw,cfg))
-        elif kind in ('nifti','nifti_gz'): descriptors.append(_nifti_descriptor(name,name,raw,cfg))
-        elif kind=='dcm': descriptors.append(_dicom_descriptor(name,name,raw,cfg))
+        if kind=='npy': descriptors.append(_npy_descriptor(upload_id,name,raw,cfg))
+        elif kind in ('nifti','nifti_gz'): descriptors.append(_nifti_descriptor(upload_id,name,raw,cfg))
+        elif kind=='dcm': descriptors.append(_dicom_descriptor(upload_id,name,raw,cfg))
         elif kind=='zip':
             try:
                 with zipfile.ZipFile(io.BytesIO(raw)) as archive:
@@ -83,7 +92,7 @@ def inspect_uploads(files, cfg):
                     if sum(item.file_size for item in items)>cfg['max_upload_mb']*1024**2:
                         raise InputError('The uncompressed study ZIP exceeds the configured upload limit.')
                     for item in items:
-                        identifier=f'{name}::{item.filename}';entry=archive.read(item);entry_kind=_file_kind(item.filename)
+                        identifier=f'{upload_id}::{item.filename}';entry=archive.read(item);entry_kind=_file_kind(item.filename)
                         if entry_kind=='npy': descriptors.append(_npy_descriptor(identifier,item.filename,entry,cfg))
                         elif entry_kind in ('nifti','nifti_gz'): descriptors.append(_nifti_descriptor(identifier,item.filename,entry,cfg))
                         elif entry_kind=='dcm': descriptors.append(_dicom_descriptor(identifier,item.filename,entry,cfg))

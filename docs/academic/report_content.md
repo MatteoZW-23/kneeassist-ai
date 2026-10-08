@@ -1,8 +1,8 @@
 # CHAPTER 1 INTRODUCTION
 ## 1.1 Introduction
-KneeAssist AI is a local research application that classifies a complete knee magnetic resonance imaging (MRI) study as normal or abnormal. The general-abnormality output is the primary academic task. ACL tear and meniscal tear scores are retained as secondary research outputs to show how the system can be extended when suitable labels are available. This report documents data preparation, model comparison, evaluation, explanation and the user interface. Its central question is whether a reproducible study-level normal/abnormal classifier can provide a transparent basis for research testing while making the limits of its predictions visible.
+KneeAssist XAI is a local explainable-AI research application that classifies a complete knee magnetic resonance imaging (MRI) study as normal or abnormal. The general-abnormality output is the primary academic task. ACL tear and meniscal tear scores are retained as secondary research outputs to show how the system can be extended when suitable labels are available. The XAI component presents the selected model, study-level score and Grad-CAM attention for review; it does not confirm or precisely locate a lesion. This report documents data preparation, model comparison, evaluation, explanation and the user interface. Its central question is whether a reproducible study-level normal/abnormal classifier can provide a transparent basis for research testing while making the limits of its predictions visible.
 
-The implemented system is technically operational, but its measured performance does not justify routine clinical deployment. The selected model achieved a macro area under the receiver operating characteristic curve (AUROC) of 0.8267 on 120 MRNet official validation studies. External-reference AUROCs were 0.6030 for ACL injury and 0.6561 for meniscal annotations. These results support further investigation rather than a claim of reliable diagnosis. All numerical project results in this report refer to the preserved release evidence verified on 27 September 2026.
+The implemented system is technically operational, but its measured performance does not justify routine clinical deployment. The formal historical EfficientNet-B0 baseline achieved macro AUROC 0.8267 on the previously used 120-study MRNet official-validation cohort. The current dashboard uses separately fixed target routes and recorded macro AUROC 0.846 on that same development-validation cohort. Historical external-reference AUROCs of 0.6030 for ACL injury and 0.6561 for meniscal annotations belong only to the formal EfficientNet-B0 baseline. Neither evidence set is independent clinical validation. These results support further investigation rather than a claim of reliable diagnosis.
 
 ## 1.2 Background and context
 An MRI examination contains related slices rather than one independent photograph. A classifier that receives isolated screenshots may lose anatomical context, sequence information and the relationship between planes. This project therefore treats a study as its input and combines available axial, coronal and sagittal stacks. Public knee MRI research provides a suitable development foundation: MRNet specifically investigated abnormality, ACL tears and meniscal tears using retrospective MRI data (Bien et al., 2018).
@@ -24,11 +24,11 @@ A knee MRI classifier can produce plausible numerical outputs without establishi
 The aim is to develop and evaluate a reproducible deep-learning system for study-level classification of normal and abnormal knee MRI studies, with transparent evidence, visual explanations and a local user interface.
 
 ## 1.5 Specific objectives
-1. To prepare and audit knee MRI studies and normal/abnormal reference labels using reproducible preprocessing and study-level leakage checks.
-2. To develop and compare ResNet-18 and EfficientNet-B0 models for study-level normal and abnormal knee MRI classification.
-3. To evaluate and calibrate the selected normal/abnormal model using defined MRNet partitions, reporting performance and uncertainty.
-4. To implement an independent MRI inference pipeline with Grad-CAM visualisations and traceable normal/abnormal results summaries.
-5. To develop and verify a local Streamlit interface for MRI upload, slice review, classification display, export and case clearing.
+1. To develop a Streamlit-based KneeAssist XAI prototype that displays predictions, MRI slices, Grad-CAM attention and an exportable research summary.
+2. To prepare and preprocess knee MRI studies for deep-learning classification using normalisation, slice sampling and data-quality checks.
+3. To develop a transfer-learning model for automated study-level classification of normal and abnormal knee MRI studies.
+4. To compare ResNet-18 and EfficientNet-B0 models and select the better model using validation AUROC.
+5. To evaluate the selected model against available MRI reference labels using accuracy, sensitivity, specificity, precision, F1-score and AUROC.
 
 ## 1.6 Motivation
 The technical motivation is to move beyond an isolated training notebook toward a research application whose predictions can be traced to a dataset role, preprocessing configuration and checkpoint. A second motivation is to learn from model failures rather than conceal them. The observed external performance makes the distinction between software completion and clinical suitability central to the project. No personal experience, clinical placement or consultation is claimed on behalf of the student.
@@ -55,7 +55,7 @@ The experiments assume that public source labels and retained study identifiers 
 The work demonstrates an integrated data science process: define a prediction task, document source limitations, fit competing models, select on a designated development partition and report failures on other cohorts. These practices are directly relevant to reproducible informatics education. They are also useful for planning a future local validation study without confusing public-data experiments with deployment evidence.
 
 ### 1.10.2 Significance
-The principal result is a working, inspectable research system accompanied by a negative generalisation finding. Preserving a selected checkpoint despite disappointing external results prevents selective reporting from creating a misleading success story. The system can support teaching, further experiments and requirements discussions. Benefits to patient outcomes, reporting time or healthcare costs remain unmeasured.
+The principal result is a working, inspectable research system accompanied by a negative generalisation finding. Preserving the formal historical baseline and separately recording the current fixed target routes despite disappointing external results prevents selective reporting from creating a misleading success story. The system can support teaching, further experiments and requirements discussions. Benefits to patient outcomes, reporting time or healthcare costs remain unmeasured.
 
 ## 1.11 Chapter summary
 This chapter defined the problem, scope and five objectives. The remaining chapters review the supporting literature, describe the implemented methods, present measured outcomes and identify the work required before stronger claims could be made.
@@ -67,13 +67,12 @@ This chapter uses a targeted narrative review to connect knee MRI classification
 ## 2.2 Research questions
 Table 2.1 Alignment of research questions and objectives
 | Objective | Research question | Evidence needed |
-| 1 | Can the available studies be prepared with traceable labels and defensible separation? | Manifests, source roles and leakage audit |
-| 2 | Which candidate ranks highest on the designated internal selection partition? | Comparable internal AUROC and saved checkpoints |
-| 3 | How well do its scores discriminate and classify on specified evaluation cohorts? | Per-target metrics, calibration description and uncertainty |
-| 4 | Can a saved model independently generate inspectable, traceable output? | Real-case inference, attention output and checkpoint identity |
-| 5 | Can the local application complete the intended researcher workflow? | Upload, analysis, visualisation, export and clear verification |
-
-The questions separate predictive quality from engineering functionality. A successful upload does not answer the discrimination question, and a high internal AUROC does not establish that the interface is safe or usable in a clinic. Each question has an observable answer within the present project, even where the answer exposes a limitation.
+|---|---|---|
+| 1 | Can a local prototype present research scores, MRI slices, Grad-CAM attention and exportable summaries for supported MRI studies? | Upload, analysis, visualisation, export and clear-case verification |
+| 2 | Can knee MRI studies be prepared consistently for deep-learning classification? | Normalisation, slice sampling, plane checks and data-quality controls |
+| 3 | Can a transfer-learning model classify knee MRI studies as normal or abnormal at study level? | Study-level multi-plane classifier and supported predictions |
+| 4 | Which compared model gives the stronger validation AUROC? | ResNet-18 and EfficientNet-B0 validation comparison and recorded baseline |
+| 5 | What performance does the selected model achieve against available MRI reference labels? | Per-target metrics, calibration and documented evaluation limits |
 
 ## 2.3 Search strategy and data sources
 The documentation search was conducted through web search, publisher pages, official conference proceedings, PubMed/PMC records and DOI metadata. Search concepts included knee MRI classification, MRNet, KneeMRI ACL injury, fastMRI pathology annotations, residual networks, EfficientNet, calibration, leakage, external validation, saliency maps and prediction-model reporting. Reference metadata were checked against primary publication records or DOI records. The retained-source register appears in Appendix B.
@@ -120,7 +119,7 @@ Varoquaux and Cheplygina (2022) discuss methodological failures in medical imagi
 Zech et al. (2018) examine variable generalisation in pneumonia detection across chest-radiograph sources. This is not knee MRI evidence. Its relevance is methodological: strong performance in one source need not persist elsewhere. The local knee results provide the project-specific evidence of that concern.
 
 ### 2.4.5 Explanations and reporting
-Selvaraju et al. (2017) introduce Grad-CAM, which uses gradients to produce class-related visual localisation. KneeAssist AI uses this form of attention visualisation to accompany study scores. A highlighted region is not treated as a segmented tear or verified anatomical lesion.
+Selvaraju et al. (2017) introduce Grad-CAM, which uses gradients to produce class-related visual localisation. KneeAssist XAI uses this form of attention visualisation to accompany study scores. A highlighted region is not treated as a segmented tear or verified anatomical lesion.
 
 Adebayo et al. (2018) propose sanity checks for saliency methods. Their work cautions against interpreting visual plausibility alone as evidence that a heatmap explains the learned decision faithfully. This project verifies heatmap generation but has not completed model-randomisation or expert lesion-localisation validation.
 
@@ -177,7 +176,7 @@ A subsequent controlled experiment could retain identical manifests and run each
 ## 2.8 Methodological approaches
 The report uses CRISP-DM as an organising framework for understanding the implemented work. Chapman et al. (2000) describe a process covering business understanding, data understanding, preparation, modelling, evaluation and deployment. Here, deployment means a local research interface. This retrospective mapping does not claim that a preregistered CRISP-DM protocol governed every earlier development decision.
 
-The primary experimental comparison is narrower than a benchmark competition. It compares ResNet-18 and EfficientNet-B0 under the project configuration and selects a checkpoint by internal AUROC. A later supplementary frozen-encoder benchmark also evaluated ResNet-50, DenseNet-121 and Swin Transformer under one locked split; it did not replace the primary selection or the active checkpoint. There is no multi-seed cross-validation, prospective trial or exhaustive hyperparameter search. These comparisons are informative only when their limitations remain attached to the reported results.
+The formal primary comparison is narrower than a benchmark competition. It compares ResNet-18 and EfficientNet-B0 and selects the baseline by internal AUROC. A later portfolio evaluated ResNet-50, DenseNet-121 and Swin Transformer under one locked split. The current dashboard uses the portfolio only as fixed target-routing evidence: DenseNet-121 for general abnormality, ResNet-18 for ACL and Swin-T for meniscus when the MRI input is compatible. It does not choose a model from the uploaded study's prediction scores and it does not use a weighted ensemble. There is no multi-seed cross-validation, prospective trial or exhaustive hyperparameter search.
 
 ### 2.8.1 Distinguishing internal and external questions
 Internal evaluation asks how the development procedure behaves within the available source and partitioning scheme. External evaluation asks how a fixed procedure behaves under a separately sourced set of observations and references. A dataset can be external by source yet no longer be untouched because its results have already been inspected. These are different dimensions of independence and should be reported separately.
@@ -210,11 +209,11 @@ Table 2.3 Relationship to direct knee MRI sources
 | Bien et al. (2018) | Three-target knee MRI classification | Local encoder aggregation, partitions and calibration differ |
 | Štajduhar et al. (2017) | ACL injury MRI research | Used as ACL-only external reference; previously evaluated |
 | Zhao et al. (2022) | Pathology annotations for fastMRI | Local meniscal subset; incomplete negative references |
-| KneeAssist AI release | Integrated local workflow and measured transfer | Research prototype; no new clinical validation |
+| KneeAssist XAI release | Integrated local workflow and measured transfer | Research prototype; no new clinical validation |
 
 Published scores are not placed in a league table against the local model because the relevant test conditions differ. A defensible direct comparison would require matched data, references, preprocessing and evaluation rules. The current comparison instead explains which ideas and resources are shared and where the experimental claims diverge.
 
-The comparison also clarifies the project's intended contribution. A dataset paper can provide a resource, an architecture paper can provide a representation method, and a reporting guideline can improve transparency. KneeAssist AI combines these kinds of work into an inspectable application. The local evidence must establish whether that combination behaves adequately; citations cannot substitute for the missing experiment.
+The comparison also clarifies the project's intended contribution. A dataset paper can provide a resource, an architecture paper can provide a representation method, and a reporting guideline can improve transparency. KneeAssist XAI combines these kinds of work into an inspectable application. The local evidence must establish whether that combination behaves adequately; citations cannot substitute for the missing experiment.
 
 For a future decision-support study, the proposed use would need to be narrowed further. For example, assisting a researcher to inspect a known dataset and prioritising examinations in a clinical queue are different tasks. They involve different users, consequences and acceptable error tradeoffs. The present work evaluates the former type of research interaction. It has not measured queue prioritisation, reader assistance, patient outcomes or the consequences of delays caused by false negative predictions.
 
@@ -225,17 +224,17 @@ The review identified a defensible basis for the five objectives while separatin
 
 # CHAPTER 3 METHODOLOGY
 ## 3.1 Introduction
-This chapter describes the implementation documented by the current project artifacts. It reports what was done rather than presenting an idealised protocol. The selected release is stored under runs/mri_finetune_02. Earlier artifacts remain relevant only where explicitly identified as the preserved baseline.
+This chapter describes the implementation documented by the current project artifacts. It reports what was done rather than presenting an idealised protocol. The formal historical baseline is stored under `runs/mri_finetune_02`; the current fixed target routes are recorded in `model_registry/active_models.json` and `runs/model_family_v2`. Earlier artifacts remain relevant only where explicitly identified as historical evidence.
 
 ## 3.2 Research methodology
-CRISP-DM is used to structure the work into six connected stages. Problem understanding defines the three findings and research-only use. Data understanding identifies which labels each source can support. Preparation converts supported studies into reproducible inputs. Modelling performs the primary two-encoder comparison and records the later five-family benchmark separately. Evaluation examines internal and external-reference behaviour. Deployment packages the selected model within a local interface (Chapman et al., 2000).
+CRISP-DM structures six connected stages. Problem understanding defines the three findings and research-only use. Data understanding identifies supported labels. Preparation converts supported studies into reproducible inputs. Modelling performs the formal two-encoder comparison and preserves the later five-family portfolio separately. Evaluation examines internal and external-reference behaviour. Deployment packages a prevalidated target-routing registry in the local interface; the registry decision is made before a case is uploaded (Chapman et al., 2000).
 
 The mapping is descriptive rather than evidence of a registered prospective protocol. The distinction matters because previous exposure to official validation and KneeMRI results limits their status as untouched tests. These cohorts are still useful for descriptive evaluation, but the report does not erase the development history.
 
 ## 3.3 Research design
-The study is a retrospective computational experiment using existing public research datasets and a local software verification component. It is not a clinical trial, reader study or investigation involving newly recruited patients. The principal comparison criterion is macro AUROC on the designated internal tuning set. The selected checkpoint is then reported on the official MRNet validation set and two external-reference subsets.
+The study is a retrospective computational experiment using existing public research datasets and a local software verification component. It is not a clinical trial, reader study or investigation involving newly recruited patients. The principal comparison criterion is macro AUROC on the designated internal tuning set. The formal baseline checkpoint is then reported on the official MRNet validation set and two external-reference subsets.
 
-No external score was used to tune the selected release or reverse the predefined selection decision. This preserves the distinction between selecting a candidate and assessing its limitations. Nevertheless, because parts of the evaluation material had been used previously, an entirely independent estimate of future performance remains unavailable.
+No external score was used to tune the formal baseline or reverse its predefined selection decision. This preserves the distinction between selecting a candidate and assessing its limitations. Nevertheless, because parts of the evaluation material had been used previously, an entirely independent estimate of future performance remains unavailable.
 
 ## 3.4 Data collection and preprocessing
 ### 3.4.1 Sources and access
@@ -288,7 +287,7 @@ The interface accepts a case reference rather than requiring a name, and researc
 Dataset roles, metrics, calibration parameters and checkpoint identity are retained as machine-readable artifacts. This enables a reviewer to distinguish measured quantities from narrative interpretation. The report records rounded values for readability; JSON outputs retain the computational precision. The artifact index in Appendix C provides a route back to the experiment.
 
 ### 3.4.11 Versioning and storage
-The release uses a run-specific directory so that current outputs can be distinguished from the earlier baseline. The selected checkpoint has a SHA-256 digest recorded in Appendix C and exported summaries. A digest identifies file contents; it does not validate the scientific adequacy of a model. Original datasets were preserved, and private links are excluded from this documentation.
+The formal baseline uses a run-specific directory so that its outputs can be distinguished from earlier artifacts. Its checkpoint and each current routed checkpoint have SHA-256 digests recorded in Appendix C and exported summaries. A digest identifies file contents; it does not validate the scientific adequacy of a model. Original datasets were preserved, and private links are excluded from this documentation.
 
 ### 3.4.12 RSNA online pilot and future review gate
 The RSNA Knee Abnormality Detection competition data were inspected and used only in a private Kaggle pilot so that the large DICOM archive did not need to be copied to the local computer. The audit identified 4,407 unique studies, but only 58 studies had complete explicit labels for all 12 available conditions. The remaining report text was not converted into binary ground truth.
@@ -298,9 +297,9 @@ The pilot compared frozen ImageNet-pretrained ResNet-18 and EfficientNet-B0 enco
 Future RSNA work has a review gate rather than an automatic training step. The project contains a manifest builder, a two-reviewer agreement checker, a label template and an adjudication queue. No RSNA V2 model has been trained because qualified independent labels are not available. This is a deliberate restriction: a script can check agreement, but it cannot create a trustworthy clinical reference standard.
 
 ## 3.5 Model selection and architecture
-Both ResNet-18 and EfficientNet-B0 use ImageNet-pretrained slice encoders. The study head has a 128-unit hidden layer, ReLU activation, dropout of 0.5 and three output logits. This is a multi-label architecture: a study can receive more than one positive finding. The code separates data loading, modelling, evaluation and inference so that an additional verified target could be introduced through an explicitly retrained model.
+The formal baseline comparison uses ImageNet-pretrained ResNet-18 and EfficientNet-B0 slice encoders with study-level slice aggregation. The current dashboard registry holds separately trained, compatible models for the three displayed targets: DenseNet-121 for general abnormality, ResNet-18 for ACL and Swin-T for meniscus. It selects each model from pre-upload validation evidence and available MRI planes, never from which model gives the highest score for the current case.
 
-The comparison includes a frozen-encoder warm-up and attempted partial fine-tuning. The winning release is the EfficientNet-B0 frozen warm-up checkpoint followed by calibration. Describing it as a successful improved fine-tuned encoder would be inaccurate. The selection criterion was the internal macro AUROC, not training accuracy or external performance.
+The comparison includes a frozen-encoder warm-up and attempted partial fine-tuning. The formal historical baseline is the EfficientNet-B0 frozen warm-up checkpoint followed by calibration. Describing it as a successful improved fine-tuned encoder would be inaccurate. The selection criterion was the internal macro AUROC, not training accuracy or external performance.
 
 ## 3.6 Training and evaluation procedure
 Weighted binary cross-entropy with logits addresses label imbalance by using negative-to-positive ratios from the fitting labels. AdamW performs optimisation. Learning-rate scheduling, early stopping and checkpoint saving support controlled training. Training and validation histories are retained. Resume support restores saved state rather than starting an indistinguishable duplicate experiment.
@@ -317,7 +316,7 @@ After model selection, positive-slope Platt calibration is fitted using the rese
 ## 3.8 Validation and software testing
 The final model is assessed on 120 official validation studies. KneeMRI series are grouped into 909 exam identifiers, with repeated-series scores averaged and the maximum recorded injury severity used for the exam reference. The fastMRI subset contains 199 files with meniscal reference status derived from matching annotations. These procedures are documented separately to avoid treating the cohorts as equivalent.
 
-Software verification covers automated tests, executed notebooks and a real browser workflow. The final release records 33 passing automated tests and nine executed notebooks. A real MRI case was uploaded and used to verify predictions, attention, export controls and clearing. These checks establish that the tested paths work; they do not establish clinical accuracy, comprehensive security or usability for all intended users.
+Software verification covers automated tests, executed notebooks and a real browser workflow. The final regression check records 43 passing automated tests and nine executed notebooks. A real MRI case was uploaded and used to verify predictions, attention, export controls and clearing. These checks establish that the tested paths work; they do not establish clinical accuracy, comprehensive security or usability for all intended users.
 
 Input checks require finite numeric three-dimensional arrays and reject unsupported object arrays, invalid dimensions and constant-intensity sequences. Plane names identify axial, coronal or sagittal input. Duplicate stacks for the same plane are rejected, and ZIP contents are read without extracting arbitrary paths to disk.
 
@@ -343,15 +342,32 @@ The method combines defined dataset roles, a primary two-encoder comparison, a s
 
 # CHAPTER 4 RESULTS AND DISCUSSION
 ## 4.1 Introduction
-Results are organised by the five objectives and drawn from the preserved run artifacts. Figures reproduce project-generated outputs rather than illustrative performance. Numerical values are rounded for presentation. The selected model is the calibrated EfficientNet-B0 frozen warm-up checkpoint, and the main evaluation set is the 120-study MRNet official validation partition.
+Results are organised by the five objectives and drawn from the preserved run artifacts. Figures reproduce project-generated outputs rather than illustrative performance. Numerical values are rounded for presentation. The formal two-model objective uses the calibrated EfficientNet-B0 baseline and the 120-study MRNet official-validation partition. The current dashboard is a separate fixed target-routing implementation; its routed development metrics are reported separately below. Neither evidence set is an independent clinical test.
 
 ## 4.2 Findings by objective
-### 4.2.1 Objective 1 Data preparation and auditing
+
+### 4.2.1 Objective 1 Prototype interface, inference and explainable review
+Independent inference loads the registered target-specific checkpoint for each reported finding and processes a supported MRI study without running a training notebook. Saved results include per-target scores and checkpoint provenance. Grad-CAM generation was verified on a real case. The objective is achieved as a functioning research inference path, but lesion localisation accuracy and explanation faithfulness have not been validated.
+
+An earlier workflow test using the historical single-model baseline recorded one set of illustrative scores. Those values are retained only as an audit record and do not describe the current target-routed dashboard, which uses separate registered models for the three findings. Dashboard scores may vary with the selected registered route and exploratory MC-dropout sampling. No single demonstration case is a performance estimate or a diagnosis; the reported evaluation tables remain the appropriate evidence.
+
+
+#### Interface verification
+The Streamlit workflow supports a case reference, MRI array, NIfTI, DICOM or ZIP upload, intake inspection, manual plane confirmation where metadata is absent, analysis, slice viewing, prediction display, attention, export and clearing. The supported ZIP route includes arrays, NIfTI volumes and guarded DICOM series. JPEG/PNG viewing and prediction are excluded. Browser verification confirmed the real-case upload and analysis path, attention display, exported JSON and clearing behaviour. Readable empty-input handling and dedicated NPY, NIfTI and DICOM input-safety tests were also verified.
+
+The final release evidence records 43 automated tests passing in the final regression check and nine notebooks executed successfully. The dashboard also records a guarded ensemble and localisation framework, which remains disabled because there is no held-out evidence of an improved ensemble and no verified lesion-location labels for detection or segmentation. These are functional results for the tested version. They do not establish that every malformed archive, unsupported scan or clinical workflow has been covered. The interface is ready for controlled research testing with supported inputs, not unrestricted patient care.
+
+### 4.2.2 Objective 2 Data preparation and preprocessing
 The project prepared 1,250 MRNet studies and separated them into 804 fitting, 226 tuning, 100 calibration and 120 official validation studies. The general abnormality label is used as the primary normal/abnormal task. KneeMRI and the fastMRI subset remained outside supervised fitting. Study-level and exact-series checks were implemented. The objective is achieved at study level, with the explicit qualification that patient-level independence could not be established.
 
 The external resources were useful for different questions. KneeMRI supplied an ACL reference for 909 exam groups; the fastMRI subset supplied 199 meniscal annotation comparisons. They did not fill the gap for a complete, independently confirmed three-target external evaluation. No extra dataset was claimed to make the prototype clinically complete.
 
-### 4.2.2 Objective 2 Model development and comparison
+
+### 4.2.3 Objective 3 Transfer-learning classification model
+The project implemented a study-level transfer-learning classifier that samples MRI slices, extracts pretrained image features, aggregates them at study level and predicts normal/abnormal as the primary academic task. The model also retains ACL and meniscal research scores. This objective concerns the implemented model pipeline; the formal architecture comparison and final evidence appear under Objectives 4 and 5.
+
+
+### 4.2.4 Objective 4 Model comparison and selection
 Table 4.1 Internal selection results
 | Candidate | Internal macro AUROC | Interpretation |
 | Preserved incumbent | 0.8478 | Earlier baseline with a different fitting allocation |
@@ -360,32 +376,34 @@ Table 4.1 Internal selection results
 
 The selected candidate exceeded the incumbent's internal AUROC by approximately 0.0054. This small descriptive difference is not a demonstrated improvement in generalisation. Partial fine-tuning did not displace the frozen EfficientNet-B0 checkpoint. The objective of developing and comparing both architectures was achieved, but an expectation that fine-tuning would necessarily perform better was not supported.
 
-After the primary selection, a supplementary frozen-encoder benchmark compared five MRNet-only candidates on one locked internal-tuning split: ResNet-18 (0.8393), ResNet-50 (0.8275), DenseNet-121 (0.8354), EfficientNet-B0 (0.8472) and Swin Transformer (0.8395) macro AUROC. EfficientNet-B0 was the best new candidate, but it did not exceed the active calibrated baseline (0.8478 on the same internal criterion). The new candidate was therefore not promoted. This is a development comparison, not evidence that one architecture is clinically superior: the active model has a different historical fitting allocation, the benchmark used one seed, and no external cohort was used for selection.
+After the primary selection, a supplementary frozen-encoder benchmark compared five MRNet-only candidates on one locked internal-tuning split: ResNet-18 (0.8393), ResNet-50 (0.8275), DenseNet-121 (0.8354), EfficientNet-B0 (0.8472) and Swin Transformer (0.8395) macro AUROC. EfficientNet-B0 was the strongest new macro candidate, but it did not exceed the historical calibrated EfficientNet-B0 baseline (0.8478 on the same macro criterion), so no single overall replacement was claimed. Separately, the current dashboard registry records fixed target-level routes from its own saved development evidence: DenseNet-121 for general abnormality, ResNet-18 for ACL and Swin-T for meniscus. That routing is not a weighted ensemble and is never selected from an individual uploaded study's scores. These are development comparisons, not evidence that any architecture is clinically superior: the benchmark used one seed and no independent clinical cohort was used for selection.
 
-### 4.2.3 Objective 3 Evaluation and calibration
-Table 4.2 MRNet official validation performance
+
+### 4.2.5 Objective 5 Formal baseline evaluation and current routed development evaluation
+Table 4.2 Formal EfficientNet-B0 baseline performance on the MRNet official-validation partition
 | Finding | AUROC | F1 | Sensitivity | Specificity | Precision | Accuracy |
 | General abnormality | 0.901 | 0.927 | 0.937 | 0.680 | 0.918 | 0.883 |
 | ACL tear | 0.825 | 0.746 | 0.815 | 0.697 | 0.688 | 0.750 |
 | Meniscal tear | 0.754 | 0.631 | 0.673 | 0.647 | 0.593 | 0.658 |
 | Macro average | 0.827 | 0.768 | 0.808 | 0.675 | 0.733 | 0.764 |
 
-General abnormality is the primary result for the narrowed academic topic and had the strongest observed ranking and threshold performance. Meniscal tear was weaker, with precision of 0.593 and sensitivity of 0.673; it remains an additional research output, not the main normal/abnormal claim. The macro accuracy of 0.764 must not be advertised as the probability that every finding for a new patient is correct. It averages three binary accuracies on this particular cohort.
+Table 4.2 is the formal EfficientNet-B0 baseline evaluation used to meet the stated ResNet-18-versus-EfficientNet-B0 comparison objective. It is not the performance table for the later dashboard routing registry. General abnormality is the primary result for the narrowed academic topic and had the strongest observed ranking and threshold performance. Meniscal tear was weaker, with precision of 0.593 and sensitivity of 0.673; it remains an additional research output, not the main normal/abnormal claim. The macro accuracy of 0.764 must not be advertised as the probability that every finding for a new patient is correct. It averages three binary accuracies on this particular cohort.
 
-Calibration and threshold selection were completed on the reserved subset. The thresholds are approximately 0.6944 for general abnormality, 0.2461 for ACL tear and 0.4808 for meniscal tear. Different thresholds explain why a single common 50% rule would not reproduce the reported statuses. These thresholds are research operating points, not clinically approved decision rules.
+Table 4.3 Current fixed target-routing development metrics on the previously used MRNet official-validation partition
+| Finding / active route | AUROC | F1 | Sensitivity | Specificity | Precision | Accuracy |
+|---|---:|---:|---:|---:|---:|---:|
+| General abnormality / DenseNet-121 | 0.861 | 0.929 | 0.968 | 0.560 | 0.893 | 0.883 |
+| ACL tear / ResNet-18 | 0.870 | 0.763 | 0.926 | 0.591 | 0.649 | 0.742 |
+| Meniscal tear / Swin-T | 0.808 | 0.677 | 0.846 | 0.500 | 0.564 | 0.650 |
+| Macro average | 0.846 | 0.790 | 0.914 | 0.550 | 0.702 | 0.758 |
 
-### 4.2.4 Objective 4 Independent inference and attention
-Independent inference loads the selected checkpoint and processes a supported MRI study without running a training notebook. Saved results include per-target scores and checkpoint provenance. Grad-CAM generation was verified on a real case. The objective is achieved as a functioning research inference path, but lesion localisation accuracy and explanation faithfulness have not been validated.
+The dashboard uses these three routes only after intake has identified one or more compatible MRI planes. The route is selected from the saved registry before individual prediction scores are calculated; this is not a patient-specific “winner” and not a weighted ensemble. These values were measured on the same previously used 120-study MRNet development-validation cohort, so they describe development performance rather than independent or clinical generalisation.
 
-An example case used for workflow testing returned approximately 58.0% general abnormality, 8.6% ACL tear and 2.8% meniscal tear. These values illustrate the application's output, not a demonstration of diagnosis. A single example cannot estimate performance, and the general-abnormality value is below the selected general-abnormality threshold despite exceeding 50%.
+Calibration and threshold selection were completed on reserved development data. The formal baseline uses its own historical thresholds. The active routed dashboard uses target-specific saved thresholds of approximately 0.556 for general abnormality, 0.129 for ACL and 0.310 for meniscus. Different thresholds explain why a single common 50% rule would not reproduce the reported statuses. These thresholds are research operating points, not clinically approved decision rules.
 
-### 4.2.5 Objective 5 Local interface verification
-The Streamlit workflow supports a case reference, MRI array, NIfTI, DICOM or ZIP upload, intake inspection, manual plane confirmation where metadata is absent, analysis, slice viewing, prediction display, attention, export and clearing. The supported ZIP route includes arrays, NIfTI volumes and guarded DICOM series. JPEG/PNG viewing and prediction are excluded. Browser verification confirmed the real-case upload and analysis path, attention display, exported JSON and clearing behaviour. Readable empty-input handling and dedicated NPY, NIfTI and DICOM input-safety tests were also verified.
-
-The final release evidence records 33 automated tests passing and nine notebooks executed successfully. The dashboard also records a guarded ensemble and localisation framework, which remains disabled because there is no held-out evidence of an improved ensemble and no verified lesion-location labels for detection or segmentation. These are functional results for the tested version. They do not establish that every malformed archive, unsupported scan or clinical workflow has been covered. The interface is ready for controlled research testing with supported inputs, not unrestricted patient care.
 
 ## 4.3 Descriptive results and visualisations
-Table 4.3 Label distribution in the 120-study MRNet evaluation cohort
+Table 4.4 Label distribution in the 120-study MRNet evaluation cohort
 | Finding | Positive reference | Negative reference | Positive proportion |
 | General abnormality | 95 | 25 | 79.2% |
 | ACL tear | 54 | 66 | 45.0% |
@@ -412,7 +430,7 @@ Precision–recall behaviour provides another view of positive-finding performan
 
 For general abnormality, 89 positive studies were flagged and six were missed; eight of 25 negative-reference studies were flagged. For ACL tear, 44 positives were flagged and ten were missed, with twenty false positives. For meniscal tear, 35 positives were flagged and seventeen were missed, with twenty-four false positives. These counts show why apparently strong aggregate performance cannot be interpreted as error-free assistance.
 
-Table 4.4 External-reference results
+Table 4.5 External-reference results
 | Evaluation | Units | AUROC | Sensitivity | Specificity | Precision | F1 |
 | KneeMRI ACL | 909 exams | 0.603 | 0.549 | 0.586 | 0.305 | 0.392 |
 | fastMRI meniscal reference | 199 files | 0.656 | 0.709 | 0.552 | 0.629 | 0.667 |
@@ -426,7 +444,7 @@ The fastMRI comparison included 103 files with a positive meniscal annotation re
 @figure runs/mri_finetune_02/results/external_fastmri/roc_curves.png | Figure 4.7 Exploratory fastMRI meniscal-reference ROC curve. Source: project evaluation artifacts. Annotation absence is not a definitive normal reference.
 
 ## 4.5 Inferential statistics
-Table 4.5 Study-bootstrap AUROC intervals
+Table 4.6 Study-bootstrap AUROC intervals
 | Finding | Point estimate | 95% bootstrap interval |
 | General abnormality | 0.901 | 0.820–0.966 |
 | ACL tear | 0.825 | 0.750–0.892 |
@@ -436,13 +454,13 @@ Table 4.5 Study-bootstrap AUROC intervals
 These intervals are based on 1,000 resamples of the evaluation studies. They quantify only the uncertainty represented by that resampling scheme. They are not confidence intervals for performance at a new Zimbabwean hospital, and they do not justify a statistical superiority claim over the earlier baseline.
 
 ## 4.6 Statistical analysis of the release comparison
-Table 4.6 Earlier baseline and selected release
-| Evaluation AUROC | Earlier baseline | Selected release |
+Table 4.7 Earlier baseline and formal selected baseline release
+| Evaluation AUROC | Earlier baseline | Formal EfficientNet-B0 baseline |
 | MRNet macro | 0.8499 | 0.8267 |
 | KneeMRI ACL | 0.6346 | 0.6030 |
 | fastMRI meniscal reference | 0.6740 | 0.6561 |
 
-All three reported broader evaluation AUROCs decreased, despite the higher internal selection AUROC. This is the central negative finding. Because the fitting allocation and calibration procedure also changed, the comparison does not isolate the effect of architecture or fine-tuning. It does establish that the selected release should not be described as an overall performance improvement.
+All three reported broader evaluation AUROCs decreased, despite the higher internal selection AUROC. This is the central negative finding. Because the fitting allocation and calibration procedure also changed, the comparison does not isolate the effect of architecture or fine-tuning. It does establish that the formal baseline should not be described as an overall performance improvement.
 
 General-abnormality specificity increased from 20% in the earlier release to 68%, while sensitivity decreased from 100% to 93.7%. This is an operating-point tradeoff rather than proof of greater clinical value. Final Brier scores were approximately 0.098 for abnormality, 0.192 for ACL and 0.200 for meniscus; without a prespecified comparative calibration analysis, these values alone do not establish successful transportable calibration.
 
@@ -478,7 +496,7 @@ The principal limitations are unavailable patient linkage, reused official valid
 These limitations affect different claims. Missing patient linkage constrains independence; non-exhaustive annotations constrain reference validity; one seed constrains training robustness; and absent clinical workflow evidence constrains usefulness. They cannot all be resolved by adding another architecture or making the dashboard more polished.
 
 ## 4.11 Chapter summary
-The release works as a research application and produces auditable predictions and attention. Its strongest measured performance is general abnormality on MRNet. External-reference results are weak, and the selected release did not improve the broader AUROCs over the earlier baseline. The findings support controlled research testing and a better independent evaluation design.
+The release works as a research application and produces auditable predictions and attention. Its strongest measured performance is general abnormality on MRNet. External-reference results are weak, and the formal historical baseline did not improve the broader AUROCs over the earlier baseline. The live target-routing evidence is separate development evidence. The findings support controlled research testing and a better independent evaluation design.
 
 # CHAPTER 5 CONCLUSIONS AND RECOMMENDATIONS
 ## 5.1 Introduction
@@ -487,16 +505,16 @@ This chapter draws conclusions at the level supported by the experiment. It sepa
 ## 5.2 Summary by objective
 Table 5.1 Achievement and remaining qualification
 | Objective | Achieved outcome | Qualification |
-| 1 | Prepared data and study-level audits | Patient-level independence not proven |
-| 2 | Compared both requested encoders and retained a five-family benchmark | Frozen EfficientNet selected; no new candidate exceeded the active baseline |
-| 3 | Calibrated and reported internal and external-reference results | Reused cohorts and limited references constrain conclusions |
-| 4 | Independent inference and Grad-CAM output | Attention is not validated lesion localisation |
-| 5 | Verified local MRI workflow and exports | Research usability only; no clinical field study |
+| 1 | Developed the Streamlit prototype with MRI upload, prediction display, Grad-CAM attention and research-summary export | Research usability only; no clinical field study |
+| 2 | Prepared MRI studies with normalisation, slice sampling and data-quality checks | Patient-level independence not proven |
+| 3 | Developed a study-level transfer-learning classification pipeline | MRNet-only training; general abnormality is the primary task |
+| 4 | Compared ResNet-18 and EfficientNet-B0 by validation AUROC | EfficientNet-B0 is the formal historical baseline; current dashboard routing is reported separately |
+| 5 | Reported AUROC, F1, sensitivity, specificity, precision and accuracy against available references | Reused cohorts and limited references constrain conclusions |
 
 The objectives were deliberately function-based and measurable. They did not promise a numerical accuracy level, replacement of specialists or deployment certification. This allows the report to describe completed work without suppressing the observed weaknesses.
 
 ## 5.3 Conclusions
-The project demonstrates that an end-to-end knee MRI research application can be assembled around pretrained image encoders, study-level pooling and a modular inference pipeline. It also demonstrates that a higher internal selection score does not necessarily translate to higher performance on other evaluation material. The chosen EfficientNet-B0 frozen warm-up release achieved MRNet macro AUROC of 0.8267, while external ACL and meniscal-reference AUROCs were 0.6030 and 0.6561.
+The project demonstrates that an end-to-end knee MRI research application can be assembled around pretrained image encoders, study-level pooling and a modular inference pipeline. It also demonstrates that a higher internal selection score does not necessarily translate to higher performance on other evaluation material. The formal historical EfficientNet-B0 frozen warm-up release achieved MRNet macro AUROC of 0.8267, while its external ACL and meniscal-reference AUROCs were 0.6030 and 0.6561. Separately, the live dashboard's fixed target-routing development metrics have macro AUROC 0.846 on the same previously used MRNet cohort; this is not independent clinical validation.
 
 The appropriate conclusion is research readiness with important validity limits. The application can be used to inspect supported studies, reproduce outputs and guide subsequent experiments. It should not be used to rule out injury, produce autonomous diagnoses or imply comprehensive assessment of knee pathology.
 
@@ -532,4 +550,5 @@ Future modelling could compare sequence-aware aggregation or three-dimensional r
 Explanation research should include sanity checks and, where available, expert localisation references. Calibration should be examined with enough cases and on independent data, with operating thresholds selected for a specified use and error-cost profile. A local prospective study would be a separate undertaking requiring institutional arrangements; this report does not imply that these have already been secured.
 
 ## 5.8 Final conclusion
-KneeAssist AI fulfils the five documented objectives as a functioning and evaluated research prototype. Its most valuable output is a transparent system whose strengths and failures can both be inspected. The next step is independent, well-referenced validation and controlled improvement, not a claim that the model is ready to replace clinical judgement.
+KneeAssist XAI fulfils the five documented objectives as a functioning and evaluated research prototype. Its most valuable output is a transparent system whose strengths and failures can both be inspected. The next step is independent, well-referenced validation and controlled improvement, not a claim that the model is ready to replace clinical judgement.
+

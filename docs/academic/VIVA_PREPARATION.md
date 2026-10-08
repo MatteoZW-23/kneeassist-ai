@@ -1,26 +1,30 @@
-# KneeAssist AI Viva Preparation
+# KneeAssist XAI Viva Preparation
 
 Use this guide to prepare for a discussion of the project. Do not memorise answers word for word. Read the linked files, run the application yourself, and explain only the parts you understand. If asked about your personal contribution or use of tools, answer accurately and follow your institution's rules.
 
 ## One minute project explanation
 
-KneeAssist AI is a local research application for analysing a complete knee MRI study. Its primary academic task is to classify the study as normal or abnormal. ACL tear and meniscal tear scores are secondary research outputs, not the main title claim. The project uses MRNet because it provides full MRI studies and labels for these targets. It compares ResNet-18 and EfficientNet-B0, selects a saved checkpoint using the planned internal AUROC rule, and provides a Streamlit interface to load a supported MRI study, show scores, display MRI slices and generate Grad-CAM attention maps. The project is a research prototype. Its external results are limited, so it is not presented as a clinical diagnostic system.
+KneeAssist XAI is a local explainable-AI research application for analysing a complete knee MRI study. Its primary academic task is to classify the study as normal or abnormal. ACL tear and meniscal tear scores are secondary research outputs, not the main title claim. The project uses MRNet because it provides full MRI studies and labels for these targets. It compares models using preserved validation evidence and provides a Streamlit interface to load a supported MRI study, show scores, display MRI slices, identify the selected model and generate Grad-CAM attention maps. The XAI features explain model scoring; they do not confirm or precisely locate a lesion. The project is a research prototype. Its external results are limited, so it is not presented as a clinical diagnostic system.
+
+## Which model is used when I upload a study?
+
+The formal academic comparison retained EfficientNet-B0 as the recorded baseline because it had the stronger validation AUROC in the required ResNet-18-versus-EfficientNet-B0 comparison. The live dashboard does not use that one baseline for every displayed finding. It reads the fixed registry before scoring the upload: DenseNet-121 produces the general-abnormality score, ResNet-18 produces the ACL score, and Swin-T produces the meniscal score. The available MRI planes are checked for compatibility. The system never chooses a model because it happened to give the highest score for that patient, and it does not average these models as an ensemble.
 
 ## The five objectives in simple language
 
 | Objective | What was done | Evidence to open during a viva |
 |---|---|---|
-| 1. Prepare MRI data | MRI studies were checked, normalised by sequence and split at study level. Exact-file checks were used to reduce leakage risk. | `notebooks/00_Setup_and_Dataset_Checks.ipynb`, `data/mrnet_manifest.csv` |
-| 2. Compare models | ResNet-18 and EfficientNet-B0 were trained as study-level models. | `notebooks/01_Train_MRI_Models_ResNet18_and_EfficientNetB0.ipynb`, `results/model_comparison.json` |
-| 3. Evaluate the selected model | AUROC, F1, sensitivity, specificity, precision, accuracy, curves and confusion matrices were reported. | `notebooks/02_Compare_Models_and_Validate_on_MRNet.ipynb`, `runs/mri_finetune_02/validation_summary.json` |
-| 4. Build independent inference | A saved checkpoint can load a new supported study, give scores and create Grad-CAM output. | `notebooks/03_Predict_MRI_Studies_and_View_GradCAM.ipynb`, `src/inference/predictor.py` |
-| 5. Build the interface | The local Streamlit dashboard supports upload, review, explanation, text/JSON export and clearing the case. | `app.py`, `notebooks/04_Test_Dashboard_and_Input_Safety.ipynb` |
+| 1. Develop the prototype | The Streamlit dashboard supports upload, review, explanation, text/JSON export and clearing the case. | `app.py`, `notebooks/04_Test_Dashboard_and_Input_Safety.ipynb` |
+| 2. Prepare MRI studies | MRI studies were normalised by sequence, sampled by slice, checked for valid inputs and split at study level. | `notebooks/00_Setup_and_Dataset_Checks.ipynb`, `data/mrnet_manifest.csv` |
+| 3. Develop the transfer-learning model | A study-level transfer-learning MRI classifier was implemented. | `src/models/study_model.py`, `src/training/train.py` |
+| 4. Compare models | ResNet-18 and EfficientNet-B0 were compared using validation AUROC; EfficientNet-B0 is the recorded formal baseline. | `notebooks/01_Train_MRI_Models_ResNet18_and_EfficientNetB0.ipynb`, `results/model_comparison.json` |
+| 5. Evaluate the selected model | AUROC, F1, sensitivity, specificity, precision, accuracy, curves and confusion matrices were reported against available reference labels. | `notebooks/02_Compare_Models_and_Validate_on_MRNet.ipynb`, `runs/mri_finetune_02/validation_summary.json` |
 
 ## Questions an examiner may ask
 
 ### What data trained the deployed model?
 
-MRNet only. The active model was not trained on KneeMRI, fastMRI, X-ray archives or the Kaggle RSNA pilot. This prevents treating differently labelled datasets as if they were directly interchangeable.
+MRNet only. The active registered models were not trained on KneeMRI, fastMRI, X-ray archives or the Kaggle RSNA pilot. This prevents treating differently labelled datasets as if they were directly interchangeable.
 
 ### Why did you not use every dataset?
 
@@ -32,7 +36,7 @@ It was examined and trained online in a private Kaggle notebook to save local st
 
 ### What is the final model performance?
 
-On the 120-study MRNet official validation cohort, macro AUROC was 0.827. Per-target AUROC was 0.901 for general abnormality, 0.825 for ACL tear and 0.754 for meniscal tear. These are development results, not proof of clinical performance. The full values are in `runs/mri_finetune_02/READINESS_REPORT.md`.
+For the formal EfficientNet-B0 baseline, macro AUROC was 0.827 on the previously used 120-study MRNet development-validation cohort. The active target-routed dashboard had macro AUROC 0.846 on that same reused cohort: 0.861 for general abnormality (DenseNet-121), 0.870 for ACL (ResNet-18) and 0.808 for meniscus (Swin-T). These are development results, not independent or clinical performance. See `models/MODEL_CARD.md` and `runs/model_portfolio_v1/final/metrics.json`.
 
 ### Why are external results important?
 
@@ -65,9 +69,9 @@ The lack of a new, independent, clinically reviewed multi-site dataset. The next
 3. Select **Analyse study**.
 4. Explain the three scores as model probabilities, not diagnoses.
 5. Open the MRI slice viewer and show the three planes.
-6. Open model attention and explain the Grad-CAM warning.
+6. Select a reported finding, click **Generate attention map**, then explain the Grad-CAM warning.
 7. Export the JSON summary and clear the current case.
-8. Open `runs/mri_finetune_02/READINESS_REPORT.md` and point out both the internal results and external limitations.
+8. Open `model_registry/active_models.json`, `models/MODEL_CARD.md`, `runs/model_portfolio_v1/final/metrics.json` and `runs/mri_finetune_02/READINESS_REPORT.md` to distinguish the live routes, historical baseline and their limitations.
 
 ## Before presenting
 
@@ -76,3 +80,4 @@ The lack of a new, independent, clinically reviewed multi-site dataset. The next
 - Check that you can explain AUROC, sensitivity, specificity and a confusion matrix in your own words.
 - Do not claim that the model diagnoses patients, replaces radiologists or has been validated in Zimbabwe.
 - Follow your institution's rules on acknowledgement and use of tools.
+

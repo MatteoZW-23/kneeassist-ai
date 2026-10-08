@@ -1,8 +1,8 @@
-# KneeAssist AI: remaining validation work
+# KneeAssist XAI: remaining validation work
 
 ## Status
 
-The software and research checkpoint are complete for local research testing. This is **not** evidence that the model is clinically ready. The active model was trained on MRNet only. Its official MRNet validation macro AUROC is 0.827, while previously evaluated external reference results are 0.603 for KneeMRI ACL and 0.656 for fastMRI meniscus. Those results are not sufficient to claim reliable use on a new hospital, scanner, patient population, or DICOM workflow.
+The software and research model registry are complete for local research testing. This is **not** evidence that the system is clinically ready. The active dashboard routes three MRNet-only models and achieved macro AUROC 0.846 on a 120-study MRNet official-validation cohort previously used during development. The historical EfficientNet-B0 baseline achieved macro AUROC 0.827 on its recorded evaluation. Previously evaluated external reference results for that baseline were 0.603 for KneeMRI ACL and 0.656 for fastMRI meniscus. These figures are not sufficient to claim reliable use on a new hospital, scanner, patient population or DICOM workflow.
 
 The RSNA online pilot is deliberately isolated from the deployed model. It used only 58 explicitly labelled studies and had exploratory grouped-fold macro AUROC near 0.658. Unverified reports were not turned into diagnostic labels.
 
@@ -39,4 +39,6 @@ The RSNA online pilot is deliberately isolated from the deployed model. It used 
 2. U.S. Food and Drug Administration, Health Canada, and Medicines and Healthcare products Regulatory Agency. *Good Machine Learning Practice for Medical Device Development: Guiding Principles*. 2021. https://www.fda.gov/media/153486/download
 3. EQUATOR Network. *TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods*. https://www.equator-network.org/reporting-guidelines/tripod-statement/
 
-These sources guide development and reporting. They do not certify KneeAssist AI or replace local legal, ethics, clinical, or regulatory advice.
+These sources guide development and reporting. They do not certify KneeAssist XAI or replace local legal, ethics, clinical, or regulatory advice.
+
+

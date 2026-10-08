@@ -10,6 +10,39 @@
       "acl",
       "meniscus"
     ],
-    "release_role": "Active calibrated research checkpoint"
+    "release_role": "Historical formal EfficientNet-B0 baseline checkpoint; not the active target-routed dashboard."
+  },
+  {
+    "file": "runs/model_family_v2/models/densenet121_best.pth",
+    "bytes": 31628914,
+    "sha256": "a8c7e4c1d5103d7497a26d0690eca43a9e0be2ba1cba29181626ce3f88834d33",
+    "architecture": "densenet121",
+    "training_dataset": "MRNet-v1.0",
+    "targets": [
+      "abnormal"
+    ],
+    "release_role": "Active fixed dashboard route for abnormal; MRNet-only development evidence, not clinical validation."
+  },
+  {
+    "file": "runs/model_family_v2/models/resnet18_best.pth",
+    "bytes": 46392219,
+    "sha256": "39af24d0a0dd64328dd532d3582e073df9c71e5bad10340e44fa6e565257bec0",
+    "architecture": "resnet18",
+    "training_dataset": "MRNet-v1.0",
+    "targets": [
+      "acl"
+    ],
+    "release_role": "Active fixed dashboard route for acl; MRNet-only development evidence, not clinical validation."
+  },
+  {
+    "file": "runs/model_family_v2/models/swin_t_best.pth",
+    "bytes": 112774989,
+    "sha256": "2cc4c4fcadea919e5a0e0d1fb3688cfc748af502617fac7311d97f37204476a3",
+    "architecture": "swin_t",
+    "training_dataset": "MRNet-v1.0",
+    "targets": [
+      "meniscus"
+    ],
+    "release_role": "Active fixed dashboard route for meniscus; MRNet-only development evidence, not clinical validation."
   }
 ]

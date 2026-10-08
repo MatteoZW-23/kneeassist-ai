@@ -1,38 +1,350 @@
 {
-  "registry_version": "1.0",
+  "registry_version": "2.0",
+  "routing_status": "active_development_routing",
   "selection_policy": {
     "name": "validated_research_score_v1",
-    "weights": {"auroc": 0.45, "sensitivity": 0.30, "pr_auc": 0.15, "f1": 0.10},
-    "rule": "Only existing research checkpoints with a compatible input and locked validation evidence are eligible."
+    "weights": {
+      "auroc": 0.45,
+      "sensitivity": 0.3,
+      "average_precision": 0.15,
+      "f1": 0.1
+    },
+    "rule": "For each target, only a checkpoint preselected from the fixed tuning partition and compatible with the uploaded MRI planes is eligible. The score weights AUROC, sensitivity, average precision (AP; a precision-recall-curve summary), and F1. Individual prediction scores never select a model.",
+    "metric_correction": "On 8 October 2026 the 0.15 AP component was mapped to the saved average_precision metric. Recalculation retained DenseNet-121 (abnormal), ResNet-18 (ACL), and Swin-T (meniscus)."
+  },
+  "routing_evidence": {
+    "portfolio_report": "runs/model_portfolio_v1/portfolio_report.json",
+    "final_development_evaluation": "runs/model_portfolio_v1/final/metrics.json",
+    "selection_partition": "MRNet tuning partition",
+    "final_partition": "MRNet official validation previously used in development; not independent clinical validation."
   },
   "ensemble_policy": {
-    "status": "disabled_pending_validated_members",
-    "rule": "An ensemble is enabled only when calibrated member probabilities, weights, and improvement over the active single model are established on a locked evaluation protocol.",
-    "disagreement_thresholds": {"moderate": 0.10, "high": 0.20}
+    "status": "disabled",
+    "rule": "This is target routing, not a probability ensemble. No weighted ensemble is active."
   },
   "ensembles": [],
   "localizers": [],
   "models": [
     {
-      "id": "mrnet-efficientnet-b0-frozen-calibrated-v1",
-      "architecture": "efficientnet_b0",
-      "version": "1.0",
-      "checkpoint": "models/best_model.pth",
+      "id": "family_densenet121",
+      "architecture": "densenet121",
+      "version": "portfolio-routing-v1",
+      "checkpoint": "runs/model_family_v2/models/densenet121_best.pth",
       "training_dataset": "MRNet-v1.0",
-      "supported_targets": ["abnormal", "acl", "meniscus"],
-      "supported_planes": ["axial", "coronal", "sagittal"],
+      "supported_targets": [
+        "abnormal"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
       "minimum_planes": 1,
       "preprocessing_config": "checkpoint embedded configuration",
-      "calibration": "Reserved MRNet development calibration subset; not clinically or externally calibrated.",
-      "calibration_metrics": {"brier_score": null, "expected_calibration_error": null, "status": "Not recorded for this existing checkpoint; do not infer calibration quality from this registry."},
-      "inference_profile": "Local PyTorch study-level inference; speed varies by device and number of slices.",
-      "inference_time_ms": null,
-      "validation_metrics": {
-        "abnormal": {"auroc": 0.9006315789473684, "pr_auc": 0.9679541342240485, "sensitivity": 0.9368421052631579, "specificity": 0.68, "f1": 0.9270833333333334, "precision": 0.9175257731958762},
-        "acl": {"auroc": 0.8251964085297419, "pr_auc": 0.7991313931018582, "sensitivity": 0.8148148148148148, "specificity": 0.696969696969697, "f1": 0.7457627118644068, "precision": 0.6875},
-        "meniscus": {"auroc": 0.7542420814479638, "pr_auc": 0.7063060856957128, "sensitivity": 0.6730769230769231, "specificity": 0.6470588235294118, "f1": 0.6306306306306306, "precision": 0.5932203389830508}
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.8468360969154308,
+            "bias": 1.2000687994412278
+          },
+          {
+            "scale": 0.6435609841692393,
+            "bias": -0.2773314468422095
+          },
+          {
+            "scale": 0.725412418038533,
+            "bias": -0.01201805368231286
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
       },
-      "limitations": "MRNet-only training; one-seed development evidence; patient linkage unavailable; not clinically validated."
+      "thresholds": {
+        "abnormal": 0.5560261112538963,
+        "acl": 0.12059684609058874,
+        "meniscus": 0.5084952717280833
+      },
+      "calibration_metrics": {
+        "abnormal": {
+          "brier": 0.11615664357654279,
+          "log_loss": 0.3678621766313101
+        },
+        "acl": {
+          "brier": 0.13504326957816815,
+          "log_loss": 0.42173665619112755
+        },
+        "meniscus": {
+          "brier": 0.14293586844174852,
+          "log_loss": 0.4499610237257457
+        }
+      },
+      "validation_metrics": {
+        "abnormal": {
+          "auroc": 0.8813063921718134,
+          "average_precision": 0.9721906643979868,
+          "f1": 0.8919667590027701,
+          "sensitivity": 0.8797814207650273,
+          "specificity": 0.6046511627906976,
+          "precision": 0.9044943820224719,
+          "accuracy": 0.827433628318584,
+          "threshold": 0.5560261112538963,
+          "confusion_matrix": [
+            [
+              26,
+              17
+            ],
+            [
+              22,
+              161
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        }
+      },
+      "final_development_metrics": {
+        "abnormal": {
+          "auroc": 0.8606315789473683,
+          "average_precision": 0.9583868321758704,
+          "f1": 0.9292929292929293,
+          "sensitivity": 0.968421052631579,
+          "specificity": 0.56,
+          "precision": 0.8932038834951457,
+          "accuracy": 0.8833333333333333,
+          "threshold": 0.5560261112538963,
+          "confusion_matrix": [
+            [
+              14,
+              11
+            ],
+            [
+              3,
+              92
+            ]
+          ],
+          "positive_cases": 95,
+          "negative_cases": 25
+        }
+      },
+      "inference_profile": "Local PyTorch study-level inference; target-specific routing from pre-upload validation evidence.",
+      "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated.",
+      "checkpoint_sha256": "a8c7e4c1d5103d7497a26d0690eca43a9e0be2ba1cba29181626ce3f88834d33"
+    },
+    {
+      "id": "family_resnet18",
+      "architecture": "resnet18",
+      "version": "portfolio-routing-v1",
+      "checkpoint": "runs/model_family_v2/models/resnet18_best.pth",
+      "training_dataset": "MRNet-v1.0",
+      "supported_targets": [
+        "acl"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1,
+      "preprocessing_config": "checkpoint embedded configuration",
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.9307066299821039,
+            "bias": 1.0855654123809602
+          },
+          {
+            "scale": 0.6705046111235685,
+            "bias": -0.2307832474130697
+          },
+          {
+            "scale": 0.7056924964153091,
+            "bias": 0.02176318000279611
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "thresholds": {
+        "abnormal": 0.5327598910513753,
+        "acl": 0.12931322044067206,
+        "meniscus": 0.31215603288990074
+      },
+      "calibration_metrics": {
+        "abnormal": {
+          "brier": 0.11868258919287307,
+          "log_loss": 0.37302878999338374
+        },
+        "acl": {
+          "brier": 0.12464771393668299,
+          "log_loss": 0.3959158979920522
+        },
+        "meniscus": {
+          "brier": 0.1410681617604565,
+          "log_loss": 0.44907808974877644
+        }
+      },
+      "validation_metrics": {
+        "acl": {
+          "auroc": 0.8197463768115942,
+          "average_precision": 0.650626550031768,
+          "f1": 0.48,
+          "sensitivity": 0.8571428571428571,
+          "specificity": 0.6086956521739131,
+          "precision": 0.3333333333333333,
+          "accuracy": 0.6548672566371682,
+          "threshold": 0.12931322044067206,
+          "confusion_matrix": [
+            [
+              112,
+              72
+            ],
+            [
+              6,
+              36
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        }
+      },
+      "final_development_metrics": {
+        "acl": {
+          "auroc": 0.8703703703703703,
+          "average_precision": 0.8342929851179655,
+          "f1": 0.7633587786259542,
+          "sensitivity": 0.9259259259259259,
+          "specificity": 0.5909090909090909,
+          "precision": 0.6493506493506493,
+          "accuracy": 0.7416666666666667,
+          "threshold": 0.12931322044067206,
+          "confusion_matrix": [
+            [
+              39,
+              27
+            ],
+            [
+              4,
+              50
+            ]
+          ],
+          "positive_cases": 54,
+          "negative_cases": 66
+        }
+      },
+      "inference_profile": "Local PyTorch study-level inference; target-specific routing from pre-upload validation evidence.",
+      "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated.",
+      "checkpoint_sha256": "39af24d0a0dd64328dd532d3582e073df9c71e5bad10340e44fa6e565257bec0"
+    },
+    {
+      "id": "family_swin_t",
+      "architecture": "swin_t",
+      "version": "portfolio-routing-v1",
+      "checkpoint": "runs/model_family_v2/models/swin_t_best.pth",
+      "training_dataset": "MRNet-v1.0",
+      "supported_targets": [
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1,
+      "preprocessing_config": "checkpoint embedded configuration",
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.7916975330825925,
+            "bias": 0.936653202073811
+          },
+          {
+            "scale": 0.5183729575949505,
+            "bias": -0.3143806306079374
+          },
+          {
+            "scale": 0.5708395790569278,
+            "bias": -0.05081229840400988
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "thresholds": {
+        "abnormal": 0.7644956540307505,
+        "acl": 0.13489402025413108,
+        "meniscus": 0.3102556632224127
+      },
+      "calibration_metrics": {
+        "abnormal": {
+          "brier": 0.12219730898980792,
+          "log_loss": 0.3783405316557009
+        },
+        "acl": {
+          "brier": 0.13544804789026707,
+          "log_loss": 0.42483987950816277
+        },
+        "meniscus": {
+          "brier": 0.15906266578920705,
+          "log_loss": 0.4853182995844603
+        }
+      },
+      "validation_metrics": {
+        "meniscus": {
+          "auroc": 0.8158098682510979,
+          "average_precision": 0.6654571822296643,
+          "f1": 0.7010309278350515,
+          "sensitivity": 0.8607594936708861,
+          "specificity": 0.6802721088435374,
+          "precision": 0.591304347826087,
+          "accuracy": 0.7433628318584071,
+          "threshold": 0.3102556632224127,
+          "confusion_matrix": [
+            [
+              100,
+              47
+            ],
+            [
+              11,
+              68
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        }
+      },
+      "final_development_metrics": {
+        "meniscus": {
+          "auroc": 0.807975113122172,
+          "average_precision": 0.7772618190155789,
+          "f1": 0.676923076923077,
+          "sensitivity": 0.8461538461538461,
+          "specificity": 0.5,
+          "precision": 0.5641025641025641,
+          "accuracy": 0.65,
+          "threshold": 0.3102556632224127,
+          "confusion_matrix": [
+            [
+              34,
+              34
+            ],
+            [
+              8,
+              44
+            ]
+          ],
+          "positive_cases": 52,
+          "negative_cases": 68
+        }
+      },
+      "inference_profile": "Local PyTorch study-level inference; target-specific routing from pre-upload validation evidence.",
+      "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated.",
+      "checkpoint_sha256": "2cc4c4fcadea919e5a0e0d1fb3688cfc748af502617fac7311d97f37204476a3"
     }
   ]
 }

@@ -1,22 +1,24 @@
-# KneeAssist AI
+# KneeAssist XAI
 
-## Development of a Deep Learning System for Study Level Classification of Normal and Abnormal Knee MRI Studies
+## Development of an Explainable Deep Learning System for Study-Level Classification of Normal and Abnormal Knee MRI Studies
 
-Local knee MRI research software whose primary academic task is study-level normal/abnormal classification. ACL tear and meniscal tear are retained as secondary research scores. It is not an autonomous diagnostic system or a replacement for a radiologist.
+Local knee MRI research software whose primary academic task is study-level normal/abnormal classification. ACL tear and meniscal tear are retained as secondary research scores. It is not an autonomous diagnostic system, is not clinically validated, and does not replace a radiologist or recommend treatment.
+
+## Documentation
+
+Read [the documentation guide](docs/README.md) for the user guide, academic submission files, model-policy explanation and evidence boundaries.
 
 ## Current status
 
-Ready for **research testing**, with important performance limitations. The selected model is calibrated EfficientNet-B0 from the frozen warm-up stage. Both fine-tuning experiments finished; neither beat that checkpoint on the internal selection criterion. Internal AUROC rose slightly, but MRNet official-validation and both external AUROCs fell. This is not a demonstrated overall model improvement.
+Ready for **research testing**, with important performance limitations. The dashboard routes each finding to a compatible model selected before upload from fixed MRNet development evidence: DenseNet-121 for general abnormality, ResNet-18 for ACL tear and Swin Transformer for meniscal tear. It never selects a model because that model gives the highest score for an individual case.
 
-The future platform direction, current capabilities and evidence required before adding adaptive model routing, detection or segmentation are documented in [docs/SYSTEM_ROADMAP.md](docs/SYSTEM_ROADMAP.md).
+The five-architecture MRNet benchmark compared ResNet-18, ResNet-50, DenseNet-121, EfficientNet-B0 and Swin-T. A later target-level portfolio used a separate calibration subset and a locked tuning partition to choose the three registered routes. The target-routed system reached macro AUROC 0.846 on the previously used 120-study MRNet official development-validation cohort. This is not independent external or clinical validation. See [the active model card](models/MODEL_CARD.md), [portfolio report](runs/model_portfolio_v1/portfolio_report.json) and [final routed metrics](runs/model_portfolio_v1/final/metrics.json).
 
-The isolated five-architecture MRNet benchmark under `runs/model_family_v2` is complete. It compared ResNet-18, ResNet-50, DenseNet-121, EfficientNet-B0 and Swin-T without replacing the deployed V1 checkpoint. EfficientNet-B0 was best among the new candidates (internal-tuning macro AUROC 0.8472), but it did not beat the active calibrated baseline (0.8478), so it was not promoted. See [the benchmark decision](runs/model_family_v2/FINAL_DECISION.md).
-
-The active research workflow previously passed nine notebooks and the real browser upload/prediction/attention/export/clear checks. After the benchmark, dashboard and guarded-ensemble additions, the current full software suite passed 33 automated tests. See [the readiness report](runs/mri_finetune_02/READINESS_REPORT.md) for measured results and limits. Active deployment: `config.yaml`.
+The research workflow includes automated tests for input errors, a real MRI upload, predictions, Grad-CAM payload structure, export and case clearing. Active deployment and routing are recorded in `model_registry/active_models.json`.
 
 ## GitHub release contents
 
-This repository includes the source code, the active 19 MB research checkpoint at `models/best_model.pth`, configuration, tests, notebooks, model card, experiment evidence, and academic report source. MRI datasets, source archives, example studies, cached encoder weights, logs, and private links are excluded. Obtain data only from the original providers and follow their terms; the released checkpoint was trained on MRNet only.
+This repository includes source code, configuration, tests, notebooks, the model card, experiment evidence, academic report source and the historical EfficientNet-B0 baseline checkpoint at `models/best_model.pth`. The active three-route dashboard also requires local DenseNet-121, ResNet-18 and Swin-T checkpoints recorded in `model_registry/active_models.json`; those local route weights are excluded from Git because experiment weights and MRI materials are not redistributed. MRI datasets, source archives, example studies, cached encoder weights, logs and private links are excluded. Obtain data only from original providers and follow their terms.
 
 For the work that still requires independent clinical data and qualified review, see [the validation gaps and evidence plan](docs/CLINICAL_VALIDATION_GAPS.md). Software completion does not close those gaps.
 
@@ -24,7 +26,7 @@ The RSNA Kaggle pilot is separate from the active model. Its future review and t
 
 ## Launch and use
 
-Double-click **Launch KneeAssist AI.cmd**. On a new installation, use **Install.cmd** first with a compatible Python installation. The installed environment on this machine is `.venv`. The interface runs locally at http://127.0.0.1:8501.
+Double-click **Launch KneeAssist AI.cmd** to launch KneeAssist XAI. On a new installation, use **Install.cmd** first with a compatible Python installation. The installed environment on this machine is `.venv`. The interface runs locally at http://127.0.0.1:8501.
 
 Equivalent launch command:
 
@@ -40,9 +42,9 @@ JPEG/PNG picture uploads, internet scan screenshots, knee photographs and X-rays
 
 ## Smart input and model selection
 
-`src/routing/smart_input_router.py` provides the read-only intake report. `model_registry/active_models.json` records the active model, compatible planes, targets, metrics and preprocessing reference. `src/selection/model_selector.py` chooses only from existing eligible registry entries using validation AUROC, sensitivity, PR-AUC and F1 weighting. The registry currently contains one calibrated EfficientNet-B0 research checkpoint, so every supported target routes to that checkpoint and no ensemble is claimed. See [docs/SYSTEM_ROADMAP.md](docs/SYSTEM_ROADMAP.md) before adding new models, detection or segmentation.
+`src/routing/smart_input_router.py` provides the read-only intake report. `model_registry/active_models.json` records the registered models, compatible planes, targets, metrics and preprocessing reference. `src/selection/model_selector.py` chooses only from existing eligible entries using validation AUROC, sensitivity, average precision (AP) and F1 weighting. The current research registry routes general abnormality to DenseNet-121, ACL tear to ResNet-18 and meniscal tear to Swin Transformer. The selection was locked before upload; individual prediction scores never select a model. No weighted ensemble is active because it has not been shown to improve results on a held-out protocol.
 
-The project also includes guarded ensemble and localisation infrastructure. An ensemble can run only after validated member models, calibrated probabilities and non-guessed weights are registered. Detection boxes and segmentation masks can run only after trained, validated localisers with verified annotation provenance are registered. The active deployment has no such entries, so it continues to use one calibrated classifier and Grad-CAM attention. See [the ensemble and localisation gate](docs/ENSEMBLE_AND_LOCALIZATION_GATE.md).
+The project also includes guarded ensemble and localisation infrastructure. An ensemble can run only after validated member models, calibrated probabilities and non-guessed weights are registered. Detection boxes and segmentation masks can run only after trained, validated localisers with verified annotation provenance are registered. The active deployment has three fixed target-specific classifiers, no weighted ensemble and no localiser; it uses Grad-CAM attention only. See [the ensemble and localisation gate](docs/ENSEMBLE_AND_LOCALIZATION_GATE.md).
 
 ## Datasets and provenance
 
@@ -80,7 +82,7 @@ Historical baseline resume:
 .\.venv\Scripts\python.exe -m src.training.train --config configs/mrnet_fresh_01.yaml --resume
 ```
 
-Standalone inference uses the active checkpoint:
+The historical single-checkpoint inference command below is retained only for the EfficientNet-B0 baseline. The active routed dashboard loads its models through `model_registry/active_models.json`; use the dashboard for the current three-route workflow.
 
 ```powershell
 .\.venv\Scripts\python.exe -m src.inference.predictor sample_cases/mrnet_1130.zip --case EXAMPLE --json
@@ -109,3 +111,6 @@ Run software checks with `.venv/Scripts/python.exe -m pytest tests -q`. Software
 ## Limits
 
 Training on more data or fine-tuning does not guarantee improvement. This system lacks verified patient linkage, fresh independent clinical testing, prospective workflow validation, validated anatomy/out-of-distribution rejection, and diagnosis from photographs. It predicts only three findings; it does not grade injuries or detect all knee conditions. Grad-CAM indicates model attention, not a confirmed lesion or validated segmentation. Negative results do not rule out injury. Research and decision-support output requires clinical review.
+
+
+

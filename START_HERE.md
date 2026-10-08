@@ -1,9 +1,28 @@
-# KneeAssist AI: research testing
+# KneeAssist XAI: research testing
 
-Double-click **Launch KneeAssist AI.cmd**. Upload an MRI `.npy` stack, `.nii`/`.nii.gz` NIfTI volume, `.dcm` DICOM slices, or a supported study ZIP. If a processed NPY file such as `0000.npy` has no reliable orientation metadata, confirm its plane in the intake panel. The local example is `sample_cases/mrnet_1130.zip`. JPEG/PNG uploads have been removed.
+## Start the dashboard
 
-The active model's training, evaluation, nine notebooks and live browser workflow were previously verified. A later five-model benchmark is also complete: its EfficientNet-B0 candidate did not beat the active calibrated baseline, so the active checkpoint was retained. After the benchmark, dashboard and guarded-ensemble additions, the full software suite passed 33 tests; see `runs/model_family_v2/FINAL_DECISION.md`.
+Double-click **Launch KneeAssist AI.cmd** to launch KneeAssist XAI. The dashboard accepts one knee MRI study at a time. It supports MRI NumPy stacks, NIfTI volumes, DICOM slices and supported study ZIPs. JPEG/PNG pictures are intentionally rejected.
 
-**Performance remains limited.** Internal selection AUROC rose slightly, but MRNet official-validation AUROC and both external AUROCs declined. The selected checkpoint is calibrated EfficientNet-B0 with a frozen encoder, not the fine-tuned version.
+For a clear demonstration, select **Load research example** or **Load abnormal research example**. Each example includes axial, coronal and sagittal sequences from one MRNet validation study.
 
-Read [the full readiness report](runs/mri_finetune_02/READINESS_REPORT.md) before testing. Training used MRNet only. KneeMRI was previously evaluated; fastMRI reference annotations are incomplete. Patient linkage is unavailable. DICOM and NIfTI input convenience does not establish model validity on clinical DICOM or NIfTI cohorts. This is research software, not a clinically validated diagnostic system.
+## What happens after upload
+
+1. The system checks the file type and asks for a plane when a processed array has no orientation metadata.
+2. It checks which prevalidated research models are compatible with the uploaded planes.
+3. It runs the fixed registered route: DenseNet-121 for general abnormality, ResNet-18 for ACL and Swin Transformer for meniscus.
+4. It displays the three study-level scores, the selected models, a slice viewer, coarse Grad-CAM attention and an exportable summary.
+
+The results screen first lists **Models used for this study**, then repeats **Model used** under each score card. Open **Validated model selection and study compatibility** to view the architecture and saved validation evidence for each route.
+
+The system does **not** choose whichever model gives the largest score for the uploaded case. Its selection was made from fixed MRNet development evidence before upload.
+
+**Portability note:** this local working project contains all three registered route checkpoints. A fresh Git checkout contains the historical EfficientNet-B0 baseline checkpoint but not the local routing weights; it must reproduce or otherwise obtain the approved local route checkpoints before the routed dashboard can analyse a study.
+
+## Evidence and limits
+
+The routed development evaluation is in `runs/model_portfolio_v1/final/metrics.json`: macro AUROC 0.846 on 120 MRNet official validation studies that were previously used during development. Training used MRNet only. The prototype is ready for academic demonstration and research testing, but it is not clinically validated, does not diagnose disease, locate a tear precisely or recommend treatment. Clinical review is required.
+
+Read `models/MODEL_CARD.md` and `docs/CLINICAL_VALIDATION_GAPS.md` before claiming results beyond the academic prototype.
+
+
