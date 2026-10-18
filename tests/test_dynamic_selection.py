@@ -5,12 +5,15 @@ from sklearn.linear_model import Ridge
 
 from src.dynamic_selection.features import build_feature_vector, feature_names
 from src.dynamic_selection.selector import (
+    build_target_selector_artifact,
     build_selector_artifact,
     load_selector_artifact,
     runtime_artifact_diagnostics,
     save_selector_artifact,
     select_model,
+    select_models_by_target,
     train_competence_models,
+    train_target_competence_models,
 )
 from src.inference.dynamic_predictor import DynamicSelectionPredictor
 from src.utils import config
@@ -230,3 +233,33 @@ def test_gbr_competence_models_training_and_selection(tmp_path):
     assert len(decision["expected_losses"]) == len(MODEL_IDS)
     assert "MDI" in decision["factor_interpretation"]
     assert len(decision["principal_factors"]) <= 5
+
+
+def test_target_specific_selectors_can_choose_different_candidates():
+    rng = np.random.default_rng(999)
+    features = rng.normal(size=(48, 6))
+    losses = {
+        "abnormal": rng.uniform(0.1, 0.2, size=(48, len(MODEL_IDS))),
+        "acl": rng.uniform(0.1, 0.2, size=(48, len(MODEL_IDS))),
+        "meniscus": rng.uniform(0.1, 0.2, size=(48, len(MODEL_IDS))),
+    }
+    losses["abnormal"][:, 0] = 0.001
+    losses["acl"][:, 1] = 0.001
+    losses["meniscus"][:, 2] = 0.001
+    models, diagnostics = train_target_competence_models(features, losses, MODEL_IDS, seed=42)
+    artifact = build_target_selector_artifact(
+        model_ids=MODEL_IDS,
+        targets=TARGETS,
+        planes=["axial"],
+        feature_names=[f"f{index}" for index in range(features.shape[1])],
+        models_by_target=models,
+        diagnostics_by_target=diagnostics,
+        model_entries=[{"id": model_id, "checkpoint": f"{model_id}.pth"} for model_id in MODEL_IDS],
+        protocol={"selector_train": "synthetic unit-test fixture"},
+        estimator_type="ridge",
+        extended_features=False,
+    )
+    decisions = select_models_by_target(artifact, features[0])
+    assert decisions["abnormal"]["selected_model_id"] == MODEL_IDS[0]
+    assert decisions["acl"]["selected_model_id"] == MODEL_IDS[1]
+    assert decisions["meniscus"]["selected_model_id"] == MODEL_IDS[2]

@@ -158,6 +158,113 @@ def train_competence_models(
     return models, diagnostics
 
 
+def train_target_competence_models(
+    features: np.ndarray,
+    observed_losses_by_target: Mapping[str, np.ndarray],
+    model_ids: Sequence[str],
+    estimator_type: str = "ridge",
+    seed: int = 42,
+) -> tuple[dict[str, dict[str, Pipeline]], dict[str, dict[str, dict[str, float]]]]:
+    """Fit independent candidate-loss estimators for each prediction target.
+
+    The existing study-level selector estimates one loss averaged over all
+    targets.  This helper is intentionally separate: a target-specific policy
+    must be trained and evaluated as a new experiment rather than silently
+    changing the interpretation of the active study-level artifact.
+    """
+    if not observed_losses_by_target:
+        raise ValueError("At least one target-specific loss matrix is required.")
+    models_by_target: dict[str, dict[str, Pipeline]] = {}
+    diagnostics_by_target: dict[str, dict[str, dict[str, float]]] = {}
+    for target, losses in observed_losses_by_target.items():
+        models, diagnostics = train_competence_models(
+            features,
+            losses,
+            model_ids,
+            estimator_type=estimator_type,
+            seed=seed,
+        )
+        models_by_target[str(target)] = models
+        diagnostics_by_target[str(target)] = diagnostics
+    return models_by_target, diagnostics_by_target
+
+
+def build_target_selector_artifact(
+    *,
+    model_ids: Sequence[str],
+    targets: Sequence[str],
+    planes: Sequence[str],
+    feature_names: Sequence[str],
+    models_by_target: Mapping[str, Mapping[str, Pipeline]],
+    diagnostics_by_target: Mapping[str, Mapping[str, Mapping[str, float]]],
+    model_entries: Sequence[Mapping[str, Any]],
+    protocol: Mapping[str, Any],
+    estimator_type: str,
+    extended_features: bool,
+) -> dict[str, Any]:
+    """Build an inactive artifact for a target-specific DMS experiment.
+
+    It is deliberately not accepted by ``load_selector_artifact`` yet.  A
+    benchmark must demonstrate benefit and pass a separate activation review
+    before a different selection granularity reaches the clinical UI.
+    """
+    expected_targets = set(targets)
+    if set(models_by_target) != expected_targets:
+        raise ValueError("A target-specific selector is required for every target.")
+    for target, models in models_by_target.items():
+        if set(models) != set(model_ids):
+            raise ValueError(f"Target '{target}' is missing candidate competence estimators.")
+    return {
+        "artifact_version": "target-specific-competence-selector-v1",
+        "activation_status": "pending_verification",
+        "selection_granularity": "per_target",
+        "model_ids": list(model_ids),
+        "targets": list(targets),
+        "planes": list(planes),
+        "feature_names": list(feature_names),
+        "competence_models_by_target": {
+            target: dict(models) for target, models in models_by_target.items()
+        },
+        "training_diagnostics_by_target": {
+            target: {model_id: dict(values) for model_id, values in report.items()}
+            for target, report in diagnostics_by_target.items()
+        },
+        "model_entries": [dict(entry) for entry in model_entries],
+        "protocol": dict(protocol),
+        "estimator_type": estimator_type,
+        "extended_features": bool(extended_features),
+        "selection_rule": "For each target, select the candidate with the lowest learned expected target-specific Brier loss.",
+        "inference_restriction": "Only current base-model probabilities and uploaded-study features are used. Unknown case labels and final-evaluation metrics are excluded.",
+    }
+
+
+def select_models_by_target(
+    artifact: Mapping[str, Any],
+    feature_vector: Sequence[float],
+) -> dict[str, dict[str, Any]]:
+    """Return one candidate decision per target for an inactive research artifact."""
+    vector = np.asarray(feature_vector, dtype=np.float64).reshape(1, -1)
+    if vector.shape[1] != len(artifact["feature_names"]) or not np.isfinite(vector).all():
+        raise ValueError("Target-specific selector received an invalid feature vector.")
+    results: dict[str, dict[str, Any]] = {}
+    for target in artifact["targets"]:
+        estimators = artifact["competence_models_by_target"].get(target, {})
+        if set(estimators) != set(artifact["model_ids"]):
+            raise ValueError(f"Target-specific selector is incomplete for '{target}'.")
+        expected_losses = {
+            model_id: float(np.clip(estimators[model_id].predict(vector)[0], 0.0, 1.0))
+            for model_id in artifact["model_ids"]
+        }
+        ranked = sorted(expected_losses, key=lambda model_id: (expected_losses[model_id], model_id))
+        results[target] = {
+            "selected_model_id": ranked[0],
+            "expected_losses": expected_losses,
+            "ranked_model_ids": ranked,
+            "selection_rule": artifact["selection_rule"],
+        }
+    return results
+
+
 def build_selector_artifact(
     *,
     model_ids: Sequence[str],
