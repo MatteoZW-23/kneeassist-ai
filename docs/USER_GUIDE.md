@@ -11,23 +11,19 @@ JPEG/PNG screenshots, photographs, X-rays and internet images are intentionally 
 
 ## What the intake panel does
 
-The panel reports file type, shape, slice count, dimensions, numeric range and plane evidence. It checks whether a compatible registered model exists. It does not determine whether an image is clinically adequate or whether it contains a knee.
+The panel reports file type, shape, slice count, dimensions, numeric range and plane evidence. It checks whether the five registered candidates are available. It does not determine whether an image is clinically adequate or whether it contains a knee.
 
-For a presentation, use one axial, one coronal and one sagittal stack from the same MRI study. The app can process fewer planes, but displays a caution because missing-plane performance has not been separately validated.
+For the active dynamic selection workflow, use one axial, one coronal and one sagittal stack from the same MRI study. The app rejects a study with a missing plane because missing-plane dynamic-selection performance has not been evaluated.
 
 ## How to read the result screen
 
 The score cards are study-level research scores. They are not confirmed diagnoses.
 
-Above the cards, **Models used for this study** lists the route used for each output:
+Above the cards, **Selected model for this study** shows the one architecture used for all three outputs. For every complete three-plane upload, the app runs ResNet-18, ResNet-50, DenseNet-121, EfficientNet-B0 and Swin Transformer. Its saved gradient-boosting selector uses current candidate probabilities, entropy, disagreement and study descriptors to estimate each candidate's mean Brier loss. The architecture with the lowest estimate is selected.
 
-- General Abnormality → DenseNet-121
-- ACL Tear → ResNet-18
-- Meniscal Tear → Swin Transformer (Swin-T)
+Each card repeats **Model used** directly below its score. The **Model selection and study compatibility** section shows all candidate probabilities, estimated losses and the selected architecture.
 
-Each card repeats **Model used** directly below its score. The **Validated model selection and study compatibility** section shows the registered architecture, validation evidence and compatibility information.
-
-The routing is determined from the saved registry before analysis. The app does not compare patient scores and then choose a model that produced the largest score. It also does not average the three models into an ensemble.
+The selector cannot see the MRI's unknown label, does not retrain during upload, does not choose the model with the largest abnormality score and does not average the candidates as an ensemble. The estimated loss is a selection aid, not a probability that the selected model is correct. The principal-factor table explains the selector estimate only; it does not name anatomy or a lesion.
 
 ## Grad-CAM attention
 
@@ -39,7 +35,7 @@ If a heatmap is unavailable for a particular slice, choose another sampled slice
 
 The export button downloads a text or JSON research summary with the case reference, scores, selected models, thresholds and notices. **Clear current case** removes uploaded files and results from the browser session.
 
-## Demonstration wording
+## Interpretation wording
 
 Use: “This is a study-level research score produced by the listed prevalidated model. Grad-CAM explains model attention for this slice; it does not confirm a lesion. Clinical review remains required.”
 

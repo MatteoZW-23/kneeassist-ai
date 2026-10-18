@@ -9,10 +9,12 @@ from src.utils import ROOT,config,resolve
 from src.data.preprocessing import load_uploads,InputError
 from src.routing.smart_input_router import inspect_uploads
 from src.selection.model_selector import select_models
+from src.selection.evidence import candidate_evidence, display_name, formal_comparison_evidence, objective_traceability, ranking_for_target, split_summary
 from src.selection.ensemble import ensemble_plans
 from src.localization.registry import localization_status
 from src.inference.predictor import text_summary
 from src.inference.routed_predictor import RoutedPredictor
+from src.inference.dynamic_predictor import DynamicSelectionPredictor, DynamicSelectionUnavailable, dynamic_selection_status
 from src.evaluation.gradcam import is_valid_attention_payload
 
 st.set_page_config(page_title='KneeAssist XAI · MRI review',page_icon='🩻',layout='wide')
@@ -35,7 +37,7 @@ h1,h2,h3 {color:#12344b;}
 </style>''',unsafe_allow_html=True)
 
 def routing_stamp():
-    """Invalidate Streamlit's resource cache when approved routing changes."""
+    """Invalidate the cached predictor when its registry, checkpoints or code changes."""
     registry_path = ROOT / 'model_registry' / 'active_models.json'
     if not registry_path.exists():
         return ('registry-unavailable',)
@@ -45,10 +47,30 @@ def routing_stamp():
         checkpoint = ROOT / model['checkpoint']
         entries.append((model['id'], str(checkpoint), checkpoint.stat().st_mtime_ns, checkpoint.stat().st_size)
                        if checkpoint.exists() else (model['id'], str(checkpoint), 'missing'))
-    return (registry_path.stat().st_mtime_ns, tuple(entries))
+    dynamic_path = ROOT / cfg.get('dynamic_selection', {}).get('artifact', '')
+    implementation_files = (
+        ROOT / 'src' / 'inference' / 'predictor.py',
+        ROOT / 'src' / 'inference' / 'routed_predictor.py',
+        ROOT / 'src' / 'inference' / 'dynamic_predictor.py',
+        ROOT / 'src' / 'dynamic_selection' / 'selector.py',
+    )
+    implementation_stamp = tuple(
+        (str(path), path.stat().st_mtime_ns if path.exists() else 'missing')
+        for path in implementation_files
+    )
+    dynamic_stamp = (str(dynamic_path), dynamic_path.stat().st_mtime_ns, dynamic_path.stat().st_size) if dynamic_path.is_file() else (str(dynamic_path), 'missing')
+    dynamic_status=dynamic_selection_status(cfg)
+    dynamic_checkpoints=tuple(dynamic_status.get('checkpoint_stamps',[]))
+    return (registry_path.stat().st_mtime_ns, tuple(entries), implementation_stamp, dynamic_stamp,
+            bool(cfg.get('dynamic_selection', {}).get('enabled', False)),dynamic_checkpoints,dynamic_status.get('reason'))
 
 @st.cache_resource
 def cached_predictor(registry_version_stamp):
+    status = dynamic_selection_status(cfg)
+    if status['available']:
+        return DynamicSelectionPredictor(cfg=cfg)
+    if cfg.get('dynamic_selection',{}).get('enabled',False):
+        raise DynamicSelectionUnavailable('Dynamic inference is unavailable: '+status['reason'])
     return RoutedPredictor(cfg=cfg)
 
 def get_predictor():
@@ -66,6 +88,305 @@ def display_architecture(architecture):
     }
     return names.get(str(architecture).lower(), str(architecture))
 
+
+def _selection_table(target):
+    """Format saved candidate evidence for a transparent, auditable table."""
+    rows = []
+    for rank, item in enumerate(ranking_for_target(target), start=1):
+        metrics = item['metrics']
+        rows.append({
+            'Rank': rank,
+            'Model': item['model'],
+            'Selection score': round(item['selection_score'], 3),
+            'AUROC': round(metrics['auroc'], 3),
+            'PR-AUC (AP)': round(metrics['average_precision'], 3),
+            'Sensitivity': round(metrics['sensitivity'], 3),
+            'Specificity': round(metrics['specificity'], 3),
+            'Precision': round(metrics['precision'], 3),
+            'F1': round(metrics['f1'], 3),
+            'Accuracy': round(metrics['accuracy'], 3),
+            'Brier score': round(item['brier'], 3) if item['brier'] is not None else 'Not retained',
+            'Inference time': (f"{item['inference_time']:.3f} s" if item['inference_time'] is not None else 'Not retained'),
+            'Selected for this target': 'Yes' if rank == 1 else 'No',
+            'Checkpoint status': item['status'],
+        })
+    return pd.DataFrame(rows)
+
+
+def _render_saved_candidate_artifacts(target, rankings):
+    """Show retained, real benchmark figures without recomputing model results."""
+    labels = {item['model']: item['architecture'] for item in rankings}
+    selected_name = st.selectbox(
+        f'Show retained figures for {target}',
+        list(labels),
+        key=f'candidate_artifact_{target}',
+    )
+    architecture = labels[selected_name]
+    folder = ROOT / 'runs' / 'model_family_v2' / 'results' / architecture
+    figures = [
+        ('ROC curves', folder / 'roc_curves.png'),
+        ('Precision-recall curves', folder / 'precision_recall_curves.png'),
+        ('Confusion matrices', folder / 'confusion_matrices.png'),
+    ]
+    available = [(title, path) for title, path in figures if path.exists()]
+    if available:
+        cols = st.columns(len(available))
+        for column, (title, path) in zip(cols, available):
+            with column:
+                st.caption(title)
+                st.image(str(path), width='stretch')
+    else:
+        st.info('No retained figure is available for this candidate. The metric table remains the source of recorded evidence.')
+
+
+def _dynamic_experiment_evidence():
+    """Load a completed dynamic-selection evaluation without manufacturing values."""
+    path = ROOT / 'runs' / 'dynamic_selection_v1' / 'final_evaluation.json'
+    if not path.is_file():
+        return None, 'The five-model dynamic-selection experiment has not completed yet.'
+    try:
+        evidence = json.loads(path.read_text(encoding='utf-8'))
+        required = {'base_models', 'dynamic_selection', 'selection_frequency', 'activation_status'}
+        missing = required - set(evidence)
+        if missing:
+            return None, 'The dynamic-selection evaluation is incomplete: missing ' + ', '.join(sorted(missing)) + '.'
+        return evidence, None
+    except (OSError, json.JSONDecodeError) as error:
+        return None, f'The dynamic-selection evaluation could not be read: {error}'
+
+
+def _dynamic_metric_table(evidence, target):
+    """Show only measured final-partition metrics for DMS and its base models."""
+    frequency = evidence['selection_frequency']
+    rows = []
+    for model_id, report in evidence['base_models'].items():
+        metrics = report.get(target, {})
+        architecture = model_id.replace('dms_', '')
+        rows.append({
+            'Approach': display_architecture(architecture),
+            'AUROC': metrics.get('auroc'),
+            'PR-AUC (AP)': metrics.get('average_precision'),
+            'Sensitivity': metrics.get('sensitivity'),
+            'Specificity': metrics.get('specificity'),
+            'Precision': metrics.get('precision'),
+            'F1': metrics.get('f1'),
+            'Accuracy': metrics.get('accuracy'),
+            'Brier score': metrics.get('brier'),
+            'ECE (10 bins)': metrics.get('ece_10_equal_width_bins'),
+            'Log loss': metrics.get('log_loss'),
+            'Final-partition selections': frequency.get(model_id, 0),
+            'Role': 'Base classifier',
+        })
+    dms_metrics = evidence['dynamic_selection'].get(target, {})
+    rows.append({
+        'Approach': 'Dynamic selector (case-specific)',
+        'AUROC': dms_metrics.get('auroc'),
+        'PR-AUC (AP)': dms_metrics.get('average_precision'),
+        'Sensitivity': dms_metrics.get('sensitivity'),
+        'Specificity': dms_metrics.get('specificity'),
+        'Precision': dms_metrics.get('precision'),
+        'F1': dms_metrics.get('f1'),
+        'Accuracy': dms_metrics.get('accuracy'),
+        'Brier score': dms_metrics.get('brier'),
+        'ECE (10 bins)': dms_metrics.get('ece_10_equal_width_bins'),
+        'Log loss': dms_metrics.get('log_loss'),
+        'Final-partition selections': 'Study-specific',
+        'Role': 'Proposed system',
+    })
+    return pd.DataFrame(rows)
+
+
+def render_dynamic_selection_evidence():
+    """Render the independently trained five-model case-specific selector evidence."""
+    evidence, reason = _dynamic_experiment_evidence()
+    st.subheader('Dynamic model-selection experiment')
+    if evidence is None:
+        st.info(reason)
+        return
+    status = dynamic_selection_status(cfg)
+    st.caption(
+        'For each study, the five base models run first. A regularised competence estimator then chooses the architecture '
+        'with the lowest estimated mean Brier loss from current study features and five-model outputs. It cannot access an uploaded study label.'
+    )
+    if status['available']:
+        st.success('The verified selector is active for new MRI analyses.')
+    else:
+        st.warning('The experiment is recorded, but the selector is not active for new MRI analyses: ' + status['reason'])
+    st.caption('Evaluation partition: ' + str(evidence.get('partition', 'not recorded')) + '. ' + str(evidence.get('limitation', '')))
+    st.caption(
+        f"Selector varied across {sum(1 for count in evidence['selection_frequency'].values() if count)} of 5 candidates on the final partition. "
+        'Selection frequency describes recorded decisions; it is not a global ranking.'
+    )
+    latency = evidence.get('latency')
+    if latency:
+        seconds = latency.get('seconds', {})
+        st.caption(
+            f"Measured local end-to-end dynamic inference: mean {seconds.get('mean', float('nan')):.2f} s "
+            f"over {latency.get('repeat_count', '—')} repeat(s), after warm-up. " + str(latency.get('limitation', ''))
+        )
+    st.dataframe(
+        pd.DataFrame([
+            {'Model': display_architecture(model_id.replace('dms_', '')), 'Final-partition selections': count}
+            for model_id, count in evidence['selection_frequency'].items()
+        ]),
+        hide_index=True,
+        width='stretch',
+    )
+    macro_table = _dynamic_metric_table(evidence, 'macro')
+    st.subheader('Macro comparison and calibration')
+    st.dataframe(
+        macro_table[['Approach', 'AUROC', 'PR-AUC (AP)', 'F1', 'Brier score', 'ECE (10 bins)', 'Log loss', 'Role']].round(3),
+        hide_index=True,
+        width='stretch',
+    )
+    st.caption(
+        'Lower Brier score, ECE and log loss indicate better probability quality. The displayed ECE uses ten equal-width bins; '
+        'it is descriptive for this recorded partition, not clinical calibration evidence.'
+    )
+    figures_dir = ROOT / 'runs' / 'dynamic_selection_v1' / 'figures'
+    figure_columns = st.columns(2)
+    for column, filename, caption in (
+        (figure_columns[0], 'model_comparison.png', 'Macro metric comparison'),
+        (figure_columns[1], 'calibration_curves.png', 'Calibration curves on the recorded final partition'),
+    ):
+        figure = figures_dir / filename
+        if figure.is_file():
+            with column:
+                st.image(str(figure), caption=caption, width='stretch')
+    st.caption(str(evidence.get('comparison_conclusion', '')))
+    tabs = st.tabs([target['display'] for target in cfg['targets']])
+    for tab, target in zip(tabs, cfg['targets']):
+        with tab:
+            table = _dynamic_metric_table(evidence, target['key'])
+            st.dataframe(table.round(3), hide_index=True, width='stretch')
+            chart = table.set_index('Approach')[['AUROC', 'PR-AUC (AP)', 'Sensitivity', 'Specificity', 'F1']]
+            st.bar_chart(chart, width='stretch')
+            st.caption(
+                'All six rows use the same recorded final studies. The dynamic row changes architecture per study; it is not a fixed model. '
+                'Final-partition labels were excluded from selector training and are used here only for evaluation.'
+            )
+
+
+def render_recorded_model_evaluation():
+    """Read-only evidence page for the formal study and supplementary portfolio."""
+    evidence = candidate_evidence()
+    weights = evidence['weights']
+    st.caption('Recorded baseline experiments and static-routing evidence. This section does not describe the active dynamic selector.')
+    st.warning('All values on this page are MRNet development evidence. The 120-study official-validation cohort had previous development exposure and is not an independent clinical test.')
+
+    formal = formal_comparison_evidence()
+    st.subheader('Recorded ResNet-18 and EfficientNet-B0 comparison')
+    if formal.get('available'):
+        st.success(f"Selected model: {formal['winner']} — highest saved internal-validation macro AUROC in the ResNet-18 versus EfficientNet-B0 study.")
+        st.dataframe(pd.DataFrame(formal['rows']).round(3), hide_index=True, width='stretch')
+        counts = formal.get('counts', {})
+        st.caption(
+            f"Fixed study roles: {counts.get('fit', '—')} fitting, {counts.get('tune', '—')} tuning, "
+            f"{counts.get('calibration', '—')} calibration and {counts.get('official_valid', '—')} post-selection development evaluation studies. "
+            "The result is descriptive because one repeat was retained."
+        )
+        st.caption(formal['limitation'])
+    else:
+        st.info(formal.get('reason', 'Formal comparison evidence is unavailable.'))
+
+    st.divider()
+    st.subheader('Supplementary target-routing portfolio')
+    st.caption('This separate portfolio records static routes. These checkpoints are not the new dynamic-selection experiment checkpoints.')
+
+    st.subheader('Supplementary portfolio design')
+    design_left, design_right = st.columns([1, 1.25])
+    with design_left:
+        st.dataframe(pd.DataFrame(split_summary()), hide_index=True, width='stretch')
+    with design_right:
+        st.markdown('**Candidate architectures**')
+        st.write('ResNet-18, ResNet-50, DenseNet-121, EfficientNet-B0 and Swin Transformer (Swin-T).')
+        st.markdown('**Controlled conditions**')
+        st.caption('The five candidates use the same saved MRI study IDs, target labels, 224 × 224 preprocessing, 12 sampled slices per plane, study-level mean/max aggregation and locked 226-study tuning partition.')
+        st.markdown('**Selection score**')
+        formula = ' + '.join(f"{float(weight):.0%} × {name.replace('_', ' ').upper()}" for name, weight in weights.items())
+        st.code('Selection score = ' + formula, language=None)
+        st.caption('Calibration is reported with Brier score and log loss. It is not included in the score because ECE was not retained; no value is invented.')
+
+    st.subheader('Target-specific ranking from saved validation evidence')
+    tabs = st.tabs([target['display'] for target in cfg['targets']])
+    for tab, target in zip(tabs, cfg['targets']):
+        with tab:
+            ranking = ranking_for_target(target['key'])
+            table = _selection_table(target['key'])
+            if not ranking:
+                st.error('No saved candidate evidence was found for this target.')
+                continue
+            winner = ranking[0]
+            st.success(f"Best validated model: {winner['model']} (selection score {winner['selection_score']:.3f}). This winner was decided from the locked tuning validation evidence before case scoring.")
+            st.dataframe(table, hide_index=True, width='stretch')
+            chart = table.set_index('Model')[['AUROC', 'PR-AUC (AP)', 'Sensitivity', 'Specificity', 'F1', 'Selection score']]
+            st.bar_chart(chart, width='stretch')
+            _render_saved_candidate_artifacts(target['key'], ranking)
+            st.caption('“Benchmark evidence only” means the measured result is retained but its non-winning checkpoint is not installed for live inference. The system does not substitute it for a selected winner.')
+
+    st.subheader('Recorded static routes')
+    route_rows = []
+    for target in cfg['targets']:
+        ranked = ranking_for_target(target['key'])
+        winner = ranked[0] if ranked else None
+        if winner:
+            route_rows.append({
+                'Finding': target['display'],
+                'Selected model': winner['model'],
+                'Selection score': round(winner['selection_score'], 3),
+                'Selection basis': 'Highest predefined validation score among compatible benchmark candidates',
+                'Live route': 'Registered and selected' if winner['locally_available'] else 'Unavailable — inference blocked',
+            })
+    st.dataframe(pd.DataFrame(route_rows), hide_index=True, width='stretch')
+    st.caption('These routes apply only when dynamic selection is explicitly disabled. Dynamic mode runs its own five candidates and learned selector for each new study.')
+
+    st.subheader('Research traceability')
+    st.dataframe(pd.DataFrame(objective_traceability()), hide_index=True, width='stretch')
+    st.info('Detection boxes and segmentation masks are not enabled because no trained and validated lesion-location or segmentation model is registered. Grad-CAM is available as coarse classifier attention only.')
+
+
+def render_model_evaluation_page():
+    st.markdown('<div class="intro"><div class="tag">Measured model evidence</div><h1>Model evaluation and selection</h1><p>Compare five trained classifiers with the learned study-specific selection system.</p></div>',unsafe_allow_html=True)
+    render_dynamic_selection_evidence()
+
+
+def render_research_workflow_page():
+    st.markdown('<div class="intro"><div class="tag">Reproducible research workflow</div><h1>Research Workflow</h1><p>This page summarises the offline evaluation and online inference workflow used by the application.</p></div>', unsafe_allow_html=True)
+    st.subheader('Workflow stages')
+    if cfg.get('dynamic_selection',{}).get('enabled',False):
+        steps = [
+            ('1','Review the fixed MRNet roles','The experiment uses 704 fitting, 100 tuning, 100 calibration, 226 selector-training and 120 final-evaluation studies. Study and exact-series overlaps are checked; patient linkage is unavailable.'),
+            ('2','Train five base classifiers','ResNet-18, ResNet-50, DenseNet-121, EfficientNet-B0 and Swin-T use the same study IDs, preprocessing and three target labels. This run trains classifier heads with frozen ImageNet encoders.'),
+            ('3','Calibrate outputs','Each base model is calibrated only on the reserved calibration partition.'),
+            ('4','Train the competence estimators','Five regularised loss regressors learn from base-model outputs on the separate 226-study selector partition. Ground truth supplies Brier-loss training targets only offline.'),
+            ('5','Evaluate the complete system','All five bases and dynamic selection are scored on the same 120 studies excluded from DMS fitting. Prior project exposure prevents an independent-test claim.'),
+            ('6','Upload an MRI study','Binary content, dimensions, finite intensities and available metadata are checked. Processed arrays with unknown planes require manual confirmation.'),
+            ('7','Run all five models','Every valid analysis executes every candidate on the same original study, with the same normalisation, resizing and slice sampling.'),
+            ('8','Select for this study','Current probabilities, entropy, disagreement and acquisition features enter the learned selector. The architecture with the lowest estimated mean Brier loss provides all three final outputs.'),
+            ('9','Review the decision','The application shows five-model probabilities, estimated losses, selected architecture, thresholds and timing. A new upload invalidates the previous result.'),
+            ('10','View attention and export','Grad-CAM uses the selected model. Its coarse image-coordinate explanation and the reproducible analysis summary can be exported. Detection and segmentation remain unavailable.'),
+        ]
+    else:
+        steps = [
+        ('1', 'Review the fixed MRNet split', 'The Fixed experimental design table records fitting, tuning validation, calibration and official-validation roles.'),
+        ('2', 'Review the primary comparison', 'The Model evidence page lists the saved ResNet-18 and EfficientNet-B0 comparison used in the formal study.'),
+        ('3', 'Review supplementary routing evidence', 'The same page lists the separate target-specific portfolio, candidate ranking and saved artefacts.'),
+        ('4', 'Review the selection policy', 'The predefined weighted score uses tuning validation; case probabilities never choose the model.'),
+        ('5', 'Review the registered routes', 'DenseNet-121 is registered for general abnormality, ResNet-18 for ACL tear and Swin-T for meniscal tear.'),
+        ('6', 'Use Clinical MRI review', 'Upload one supported MRI study or use an included research example.'),
+        ('7', 'Review file intake', 'The application reports file type, dimensions and plane confirmation. Names such as 0000.npy are not trusted as plane labels.'),
+        ('8', 'Review registry retrieval', 'Model selection and study compatibility lists the selected route and saved validation rationale for every target.'),
+        ('9', 'Review study-level scores', 'The application reports three research probabilities, thresholds and models used; these are not diagnoses.'),
+        ('10', 'Review attention and limits', 'Grad-CAM shows coarse positive classifier attention for a selected target and slice, not a lesion boundary, detection box or segmentation mask.'),
+        ]
+    for number, title, detail in steps:
+        st.markdown(f'**Stage {number}: {title}.** {detail}')
+    st.subheader('Read-only evidence check')
+    st.code('.\\Show Research Evidence.cmd', language='powershell')
+    st.caption('The command opens the saved formal comparison and supplementary routing evidence without training, changing models or scoring a new study.')
+    st.subheader('Research limitations')
+    st.warning('The system is a research decision-support prototype trained on MRNet labels. It has no independent clinical validation, patient-level linkage verification, radiologist reader study, validated detector, segmentation model or treatment recommendation function.')
+
 if 'upload_generation' not in st.session_state:st.session_state.upload_generation=0
 
 def clear_case():
@@ -77,18 +398,41 @@ with st.sidebar:
     st.markdown('## KneeAssist XAI')
     st.caption('MRI RESEARCH WORKSPACE · V1')
     st.divider()
+    workspace = st.radio(
+        'Workspace',
+        ['Clinical MRI review', 'Model evaluation and selection', 'Research workflow'],
+        key='workspace_navigation',
+    )
+    st.divider()
     st.markdown('**Study-level review**\n\n'+'\n\n'.join(t['display'] for t in cfg['targets']))
     st.divider()
     st.caption('Runs locally. Uploaded images and case references remain in this browser session and are not written to application logs.')
     st.button('Clear current case',width='stretch',on_click=clear_case)
     st.caption('Research and clinical decision support. Not an autonomous diagnostic system.')
 
-st.markdown('<div class="intro"><div class="tag">Knee MRI · explainable research review</div><h1>KneeAssist XAI</h1><p>Review study-level model scores, validated model selection and attention maps. Clinical judgment remains essential.</p></div>',unsafe_allow_html=True)
+if workspace == 'Model evaluation and selection':
+    render_model_evaluation_page()
+    st.stop()
+if workspace == 'Research workflow':
+    render_research_workflow_page()
+    st.stop()
+
+st.markdown('<div class="intro"><div class="tag">Knee MRI · explainable research review</div><h1>KneeAssist XAI</h1><p>Review study-level model scores, model selection and attention maps. Clinical judgment remains essential.</p></div>',unsafe_allow_html=True)
 st.warning('Research decision-support prototype. Clinical review is required. Model attention is not a confirmed lesion or lesion location.')
 with st.expander('Model evidence and supported inputs'):
     from src.inference.readiness import deployment_evidence
     evidence=deployment_evidence(cfg)
-    st.caption('Active registered research models: '+evidence['checkpoint'])
+    dynamic_status=dynamic_selection_status(cfg)
+    dynamic_evidence,_=_dynamic_experiment_evidence()
+    if cfg.get('dynamic_selection',{}).get('enabled',False):
+        st.caption('Active analysis: all-five-model inference followed by learned case-specific competence selection.' if dynamic_status['available'] else 'Dynamic inference unavailable: '+dynamic_status['reason'])
+        if dynamic_status.get('available'):
+            st.caption('Dynamic selection accepts complete axial, coronal and sagittal studies only. It does not select a model for a missing-plane study because that use was not evaluated.')
+            for warning in dynamic_status.get('provenance_warnings',[]):
+                st.warning(warning)
+        evidence={'metrics':dynamic_evidence['dynamic_selection'] if dynamic_evidence else None}
+    else:
+        st.caption('Active registered research models: '+evidence['checkpoint'])
     st.markdown('**Use one knee MRI study at a time.** All uploaded sequences must belong to the same case. File checks cannot confirm anatomy, patient identity or acquisition suitability.')
     st.caption('MRI NumPy stacks, NIfTI volumes and DICOM studies are inspected before analysis. Unlabelled processed arrays require manual plane confirmation. JPEG/PNG are not supported. No finding rules out an injury.')
     if evidence['metrics']:
@@ -96,16 +440,16 @@ with st.expander('Model evidence and supported inputs'):
         st.dataframe(pd.DataFrame([{'Finding':t['display'],'AUROC':round(evidence['metrics'][t['key']]['auroc'],3),
                        'Sensitivity':round(evidence['metrics'][t['key']]['sensitivity'],3),
                        'Specificity':round(evidence['metrics'][t['key']]['specificity'],3)} for t in cfg['targets']]),hide_index=True)
-    st.caption('Training uses MRNet only. External KneeMRI was previously evaluated; fastMRI annotations provide limited reference labels. Patient independence and clinical confidence are not established.')
+    st.caption('Training and reported evaluation use MRNet development data. Patient independence and clinical confidence are not established.')
 left,right=st.columns([1.05,1.8],gap='large')
 with left:
     st.subheader('1 · Add a study')
     case=st.text_input('Case reference',placeholder='e.g. RESEARCH-001',max_chars=120,key=f'case_reference_{st.session_state.upload_generation}')
-    uploads=st.file_uploader('MRI study files',type=['npy','zip','dcm','nii','gz'],accept_multiple_files=True,
-        help='Use .npy, .nii/.nii.gz, .dcm, or ZIP study files. The intake panel inspects the upload before prediction.',
+    uploads=st.file_uploader('MRI study files',type=['npy','npz','zip','dcm','nii','gz'],accept_multiple_files=True,
+        help='Use .npy, .npz, .nii/.nii.gz, .dcm, or ZIP study files. Binary content and MRI structure are inspected before prediction.',
         key=f'uploads_{st.session_state.upload_generation}')
-    st.caption('Supported: MRI NumPy stacks, NIfTI volumes, DICOM slices and study ZIPs. File checks cannot confirm anatomy, mixed patients or clinical suitability. JPEG/PNG are rejected.')
-    st.caption('Defence examples use three-plane MRNet validation studies: axial, coronal and sagittal.')
+    st.caption('Supported: MRI NumPy stacks/NPZ archives, NIfTI volumes, DICOM slices and study ZIPs. Dynamic selection requires axial, coronal and sagittal sequences from the same study. File checks cannot confirm knee anatomy or clinical suitability. JPEG/PNG are rejected.')
+    st.caption('Included research examples contain three-plane MRNet validation studies: axial, coronal and sagittal.')
     if st.button('Load research example',width='stretch'):
         demo=ROOT/'sample_cases/mrnet_1130.zip'
         if uploads:
@@ -168,23 +512,50 @@ with left:
             if unconfirmed:
                 raise InputError('Confirm the MRI plane for: '+', '.join(unconfirmed)+'.')
             progress=st.progress(0,text='Checking MRI files…')
-            volumes=load_uploads(files,cfg['preprocessing'],plane_overrides);progress.progress(25,text='Selecting compatible validated model…')
-            selection=select_models(list(volumes),[target['key'] for target in cfg['targets']])
+            volumes=load_uploads(files,cfg['preprocessing'],plane_overrides)
+            dynamic_status=dynamic_selection_status(cfg)
+            if cfg.get('dynamic_selection',{}).get('enabled',False) and not dynamic_status['available']:
+                raise InputError('Dynamic inference is unavailable: '+dynamic_status['reason'])
             ensemble_plan=ensemble_plans(list(volumes),[target['key'] for target in cfg['targets']])
             localizers=localization_status()
-            unavailable=[entry['target'] for entry in selection['selections'] if entry['status']!='Selected']
-            if unavailable:
-                raise InputError('No compatible validated model is registered for: '+', '.join(unavailable)+'.')
-            progress.progress(40,text='Loading selected validated model(s)…')
-            predictor=get_predictor();progress.progress(50,text='Analysing MRI sequences…')
-            with st.spinner('Combining MRI slices and imaging planes…'):
-                # Each target is routed to its compatible preselected model.
-                # No individual-study probability is used to choose a model.
-                uncertainty_samples = cfg['evaluation'].get('uncertainty_samples', 1) if cfg['evaluation'].get('uncertainty_estimation', False) else 1
-                result=predictor.predict(
-                    volumes, case or 'Not supplied', selection['selections'],
-                    uncertainty_samples=uncertainty_samples
-                )
+            predictor=get_predictor()
+            if dynamic_status['available']:
+                progress.progress(25,text='Preparing all five trained candidates…')
+                progress.progress(40,text='Running five model inferences and case-specific selection…')
+                with st.spinner('Analysing this MRI study with all five candidate models…'):
+                    result=predictor.predict(volumes, case or 'Not supplied')
+                dynamic=result['dynamic_selection']
+                selection={
+                    'mode':'dynamic_case_specific_competence_estimation',
+                    'available_planes':sorted(volumes),
+                    'models_evaluated':dynamic['models_evaluated'],
+                    'selected_model_id':dynamic['selected_model_id'],
+                    'selected_architecture':dynamic['selected_architecture'],
+                    'expected_losses':dynamic['expected_losses'],
+                    'base_probabilities':dynamic['base_probabilities'],
+                    'total_seconds':dynamic['total_seconds'],
+                    'selection_rule':dynamic['selection_rule'],
+                    'principal_factors':dynamic.get('principal_factors',[]),
+                    'factor_interpretation':dynamic.get('factor_interpretation'),
+                    'selector_estimator':dynamic.get('selector_estimator'),
+                    'selector_provenance_warnings':dynamic.get('selector_provenance_warnings',[]),
+                    'interpretation':dynamic['interpretation'],
+                }
+            else:
+                progress.progress(25,text='Comparing compatible validated model candidates…')
+                selection=select_models(list(volumes),[target['key'] for target in cfg['targets']])
+                unavailable=[entry['target'] for entry in selection['selections'] if entry['status']!='Selected']
+                if unavailable:
+                    raise InputError('No compatible validated model is registered for: '+', '.join(unavailable)+'.')
+                progress.progress(40,text='Loading selected validated model(s)…')
+                with st.spinner('Combining MRI slices and imaging planes…'):
+                    uncertainty_samples = cfg['evaluation'].get('uncertainty_samples', 1) if cfg['evaluation'].get('uncertainty_estimation', False) else 1
+                    result=predictor.predict(
+                        volumes, case or 'Not supplied', selection['selections'],
+                        uncertainty_samples=uncertainty_samples
+                    )
+                selection['mode']='static_validation_routing'
+                selection['dynamic_unavailable_reason']=dynamic_status['reason']
             result['input_intake']=intake;result['model_selection']=selection;result['ensemble_plan']=ensemble_plan;result['localization_status']=localizers
             st.session_state.result=result;st.session_state.volumes=volumes
             st.session_state.case_signature=current_signature;st.session_state.attention_cache={}
@@ -227,10 +598,18 @@ with right:
             f"{finding['finding']} → {display_architecture(finding.get('model_architecture', 'registered model'))}"
             for finding in result['findings']
         ]
-        st.info(
-            '**Models used for this study:** ' + ' · '.join(routes) +
-            '. These are preselected from validation evidence before upload; the system does not choose a model from this study\'s scores.'
-        )
+        if result.get('dynamic_selection'):
+            dynamic=result['dynamic_selection']
+            st.info(
+                '**Selected model for this study: '+display_architecture(dynamic['selected_architecture'])+'** · '
+                'All five models analysed the same upload. The learned selector chose this architecture for all three targets using its lowest estimated mean Brier loss.'
+            )
+            st.caption(f"Models evaluated: {dynamic['models_evaluated']} of 5 · Estimated mean Brier loss: {dynamic['expected_losses'][dynamic['selected_model_id']]:.3f} (lower is preferred) · Analysis time: {dynamic['total_seconds']:.2f} s")
+        else:
+            st.info(
+                '**Models used for this study:** ' + ' · '.join(routes) +
+                '. Compatible routes were selected using saved validation evidence before case scoring.'
+            )
         for start in range(0,len(result['findings']),3):
             group=result['findings'][start:start+3]
             for column,finding in zip(st.columns(len(group)),group):
@@ -255,19 +634,52 @@ with right:
             )
         st.markdown(f"**Distance from research threshold: {result['score_separation']}** · Clinical confidence: not established")
         st.caption(result['confidence_note'])
-        with st.expander('Validated model selection and study compatibility',expanded=True):
+        with st.expander('Model selection and study compatibility',expanded=True):
             selection=result.get('model_selection',{})
             st.caption('Available planes: '+', '.join(selection.get('available_planes',result['available_planes'])))
-            rows=[]
-            for entry in selection.get('selections',[]):
-                metrics=entry.get('metrics',{})
-                rows.append({'Finding':entry['target'].replace('_',' ').title(),'Selected architecture':display_architecture(entry.get('architecture','Unavailable')),
-                             'Version':entry.get('version','—'),'Validation AUROC':f"{metrics.get('auroc',0):.3f}" if metrics else '—',
-                             'Sensitivity':f"{metrics.get('sensitivity',0):.3f}" if metrics else '—',
-                             'Average precision':f"{metrics.get('average_precision', metrics.get('pr_auc', 0)):.3f}" if metrics else '—'})
-            if rows:st.dataframe(pd.DataFrame(rows),hide_index=True,width='stretch')
-            st.caption(selection.get('policy',{}).get('rule','Registry evidence was used for selection.'))
-            ensemble_plan=result.get('ensemble_plan',{})
+            if selection.get('mode') == 'dynamic_case_specific_competence_estimation':
+                st.success(f"Dynamic selection completed: {selection['models_evaluated']} of 5 models evaluated. Selected architecture: {display_architecture(selection['selected_architecture'])}.")
+                all_model_rows=[]
+                for model_id, probabilities in selection['base_probabilities'].items():
+                    all_model_rows.append({
+                        'Model':display_architecture(model_id.replace('dms_', '')),
+                        'General abnormality':f"{probabilities[0]:.1%}",
+                        'ACL tear':f"{probabilities[1]:.1%}",
+                        'Meniscal tear':f"{probabilities[2]:.1%}",
+                        'Estimated mean Brier loss':f"{selection['expected_losses'][model_id]:.3f}",
+                        'Selected':'Yes' if model_id == selection['selected_model_id'] else 'No',
+                    })
+                st.dataframe(pd.DataFrame(all_model_rows),hide_index=True,width='stretch')
+                st.caption(selection['selection_rule'])
+                st.caption(f"Selector estimator: {selection.get('selector_estimator', 'recorded artifact')}. Lower estimated loss is preferred; it is not a probability that the selection is correct.")
+                if selection.get('principal_factors'):
+                    st.markdown('**Principal factors in this selection estimate**')
+                    factors = pd.DataFrame(selection['principal_factors']).copy()
+                    if 'contribution_to_estimated_loss' in factors:
+                        factors['contribution_to_estimated_loss'] = factors['contribution_to_estimated_loss'].round(4)
+                        factors = factors.rename(columns={'contribution_to_estimated_loss': 'Contribution to estimated loss'})
+                    elif 'feature_importance_mdi' in factors:
+                        factors['feature_importance_mdi'] = factors['feature_importance_mdi'].round(4)
+                        factors = factors.rename(columns={'feature_importance_mdi': 'Relative feature importance'})
+                    st.dataframe(factors, hide_index=True, width='stretch')
+                    st.caption(selection.get('factor_interpretation',''))
+                if selection.get('selector_provenance_warnings'):
+                    for warning in selection['selector_provenance_warnings']:
+                        st.warning(warning)
+                st.caption(selection['interpretation'])
+            else:
+                rows=[]
+                for entry in selection.get('selections',[]):
+                    metrics=entry.get('metrics',{})
+                    rows.append({'Finding':entry['target'].replace('_',' ').title(),'Selected architecture':display_architecture(entry.get('architecture','Unavailable')),
+                                 'Version':entry.get('version','—'),'Validation AUROC':f"{metrics.get('auroc',0):.3f}" if metrics else '—',
+                                 'Sensitivity':f"{metrics.get('sensitivity',0):.3f}" if metrics else '—',
+                                 'Average precision':f"{metrics.get('average_precision', metrics.get('pr_auc', 0)):.3f}" if metrics else '—'})
+                if rows:st.dataframe(pd.DataFrame(rows),hide_index=True,width='stretch')
+                st.caption(selection.get('policy',{}).get('rule','Registry evidence was used for selection.'))
+                st.caption('Dynamic case-specific selection is unavailable: '+selection.get('dynamic_unavailable_reason','no verified dynamic selector artifact was found.'))
+                st.caption('The displayed results use the existing saved validation-routing path. Individual prediction scores are not used to choose a route.')
+            ensemble_plan={} if result.get('dynamic_selection') else result.get('ensemble_plan',{})
             for plan in ensemble_plan.get('plans',[]):
                 if plan['status'] == 'Eligible validated ensemble':
                     st.caption(f"{plan['target'].replace('_',' ').title()}: validated ensemble {plan['ensemble_id']} is eligible.")
@@ -321,6 +733,16 @@ with right:
                         if not is_valid_attention_payload(attention):
                             raise ValueError('The generated attention payload was incomplete. Please generate it again.')
                         st.session_state.attention_cache[key]=attention
+                        result['explanation_status']='Generated for selected-model targets/sequences listed in explanations.'
+                        result.setdefault('explanations',{})[key]={
+                            'method':'Grad-CAM on final encoder spatial features',
+                            'selected_model_id':finding.get('model_id') if finding else None,
+                            'available':True,'has_positive_attention':attention['has_positive_attention'],
+                            'sampled_original_slice_numbers':[int(i)+1 for i in attention['indices']],
+                            'suggested_original_slice_number':int(attention['indices'][attention['suggested_slice']])+1,
+                            'feature_map_size':list(attention['feature_map_size']),
+                            'note':attention['note'],
+                        }
                     except Exception:
                         logging.exception('Attention visualization failed')
                         st.error('Attention could not be generated for this view. The study predictions remain available.')
@@ -388,13 +810,12 @@ with right:
                     st.error('Attention could not be displayed for this view. The study predictions remain available.')
         with tabs[2]:
             st.subheader('Model Performance Graphs')
-            st.caption('Performance metrics from internal validation and external evaluation datasets.')
-            
-            results_dir = resolve(cfg['evaluation']['directory'])
-            routed_results_dir = ROOT / 'runs' / 'model_portfolio_v1' / 'final'
-            final_results_dir = routed_results_dir if routed_results_dir.exists() else results_dir / 'final'
+            st.caption('Saved cohort evaluation of the analysis pipeline. These graphs are not a single uploaded patient result.')
+
+            routed_results_dir = (ROOT / 'runs' / 'dynamic_selection_v1' / 'figures') if result.get('dynamic_selection') else (ROOT / 'runs' / 'model_portfolio_v1' / 'final')
+            final_results_dir = routed_results_dir
             if routed_results_dir.exists():
-                st.caption('These are the target-routed portfolio results on the previously used MRNet official development-validation cohort. They are not independent clinical validation.')
+                st.caption('These results use the previously exposed MRNet official-validation cohort, held out from this run fitting. They are not independent clinical validation.')
             
             # Check if performance graphs exist
             roc_curves_path = final_results_dir / 'roc_curves.png'
@@ -439,62 +860,7 @@ with right:
                     metrics_df = pd.DataFrame(metrics_df_data)
                     st.dataframe(metrics_df, hide_index=True, width='stretch')
             
-            # External evaluation results if available
-            external_results = {}
-            for external_name in ['external_kneemri', 'external_fastmri']:
-                external_dir = results_dir / external_name
-                if external_dir.exists():
-                    external_json = external_dir / 'metrics.json'
-                    if external_json.exists():
-                        with open(external_json, 'r') as f:
-                            external_results[external_name] = json.load(f)
-            
-            if external_results:
-                with st.expander('Historical external-reference evidence (formal EfficientNet-B0 baseline only)'):
-                    st.caption('These results belong to the historical EfficientNet-B0 baseline, not the current target-routed dashboard. They are retained to show the generalisation limitation and must not be interpreted as active-route validation.')
-                    for external_name, external_data in external_results.items():
-                        st.markdown(f"**{external_name.replace('_', ' ').title()}**")
-                        external_df_data = []
-                        external_metrics = external_data.get('metrics', external_data.get('primary', external_data))
-                        for finding_key, finding_metrics in external_metrics.items():
-                            if finding_key != 'macro' and isinstance(finding_metrics, dict):
-                                external_df_data.append({
-                                    'Finding': finding_key.replace('_', ' ').title(),
-                                    'AUROC': f"{finding_metrics.get('auroc', 0):.3f}",
-                                    'Sensitivity': f"{finding_metrics.get('sensitivity', 0):.3f}",
-                                    'Specificity': f"{finding_metrics.get('specificity', 0):.3f}"
-                                })
-                        
-                        if external_df_data:
-                            external_df = pd.DataFrame(external_df_data)
-                            st.dataframe(external_df, hide_index=True, width='stretch')
-            
-            # Model comparison if available
-            model_comparison_path = results_dir / 'model_comparison.json'
-            if model_comparison_path.exists():
-                with open(model_comparison_path, 'r') as f:
-                    comparison_data = json.load(f)
-                
-                st.subheader('Historical formal EfficientNet-B0 baseline comparison')
-                st.markdown(f"**Historical selected baseline**: {comparison_data.get('winner', 'N/A')}")
-                st.caption(f"Selection Criterion: {comparison_data.get('criterion', 'N/A')}")
-                st.caption('This comparison satisfies the ResNet-18 versus EfficientNet-B0 academic objective. It is not the target-routed dashboard model policy shown above.')
-                
-                if 'models' in comparison_data:
-                    comparison_df_data = []
-                    for model_info in comparison_data['models']:
-                        comparison_df_data.append({
-                            'Architecture': model_info.get('architecture', 'N/A'),
-                            'Stage': model_info.get('stage', model_info.get('candidate', 'N/A')),
-                            'Best Epoch': model_info.get('selected_epoch', 'N/A'),
-                            'Internal AUROC': f"{model_info.get('metrics', {}).get('macro', {}).get('auroc', 0):.4f}"
-                        })
-                    
-                    if comparison_df_data:
-                        comparison_df = pd.DataFrame(comparison_df_data)
-                        st.dataframe(comparison_df, hide_index=True, width='stretch')
-            
-            st.info('Performance graphs and metrics are from the model evaluation phase. They represent internal validation performance and external reference dataset evaluation. These are not clinical validation results.')
+            st.info('Performance graphs and metrics are saved development evidence. They are not independent clinical validation results.')
         with tabs[3]:
             summary=text_summary(result)
             st.text_area('AI results summary',summary,height=300)
