@@ -1,0 +1,33 @@
+{
+  "status": "ready_for_academic_demonstration_and_controlled_research_testing",
+  "dashboard": {
+    "app_test": "2 passed in 54.08s",
+    "log": "logs/dashboard_verification_clean_20261012.log",
+    "health": "HTTP 200",
+    "status": "passed"
+  },
+  "limitations": [
+    "MRNet-only training",
+    "previously used development-validation cohort",
+    "no clinical validation",
+    "no lesion localisation or segmentation",
+    "no treatment recommendation"
+  ],
+  "full_test_suite": {
+    "log": "logs/defence_final_pytest_20261012.log",
+    "total": 43,
+    "status": "passed",
+    "duration_seconds": 140.25
+  },
+  "verification_date": "2026-10-12",
+  "routed_smoke": {
+    "log": "logs/defence_final_smoke_20261012.log",
+    "attention_slices": 12,
+    "status": "passed",
+    "routes": [
+      "densenet121_abnormal",
+      "resnet18_acl",
+      "swin_t_meniscus"
+    ]
+  }
+}

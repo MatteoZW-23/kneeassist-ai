@@ -6,8 +6,15 @@ import gzip
 import zipfile
 from pathlib import PurePosixPath
 import numpy as np
-import torch
-import torch.nn.functional as F
+
+try:
+    import torch
+    import torch.nn.functional as F
+    HAS_TORCH = True
+except ImportError:
+    torch = None
+    F = None
+    HAS_TORCH = False
 
 try:
     import pydicom
@@ -91,9 +98,20 @@ def _nifti_volume(data, cfg, compressed=False):
     if len(data)>cfg['max_upload_mb']*1024**2:
         raise InputError('The file exceeds the configured upload limit.')
     try:
-        raw=gzip.decompress(data) if compressed else data
+        if compressed:
+            with gzip.GzipFile(fileobj=io.BytesIO(data)) as stream:
+                raw=stream.read(cfg['max_upload_mb']*1024**2+1)
+            if len(raw)>cfg['max_upload_mb']*1024**2:
+                raise InputError('The uncompressed NIfTI exceeds the configured upload limit.')
+        else:
+            raw=data
         image=nib.Nifti1Image.from_bytes(raw)
+        shape=image.shape
+        if len(shape) not in (3,4) or np.prod(shape,dtype=np.int64)>cfg['max_upload_mb']*1024**2/4:
+            raise InputError('The NIfTI dimensions exceed supported in-memory limits.')
         values=np.asarray(image.dataobj,dtype=np.float32)
+    except InputError:
+        raise
     except Exception as e:
         raise InputError('The NIfTI file could not be read. Upload a valid .nii or .nii.gz MRI volume.') from e
     if values.ndim==4 and values.shape[-1]==1:
@@ -159,6 +177,7 @@ def safe_dicom_study(entries, cfg, overrides=None, require_declared=False):
     if pydicom is None:
         raise InputError('DICOM support is unavailable because pydicom is not installed. Re-run Install.cmd, then restart KneeAssist AI.')
     groups={}
+    patient_ids=set();study_uids=set()
     overrides=overrides or {}
     for item in entries:
         name,raw=item[:2]
@@ -166,6 +185,13 @@ def safe_dicom_study(entries, cfg, overrides=None, require_declared=False):
         path,declared=_plane_from_path(name,cfg['planes'],overrides.get(key) or overrides.get(name),allow_unknown=True)
         try: dataset=pydicom.dcmread(io.BytesIO(raw),force=False)
         except Exception as e: raise InputError('A ZIP entry is not a valid DICOM file.') from e
+        validate_dicom_modality(dataset)
+        patient_id=str(getattr(dataset,'PatientID','')).strip()
+        study_uid=str(getattr(dataset,'StudyInstanceUID','')).strip()
+        if patient_id:patient_ids.add(patient_id)
+        if study_uid:study_uids.add(study_uid)
+        if len(patient_ids)>1 or len(study_uids)>1:
+            raise InputError('The DICOM files contain different patients or studies. Upload one MRI study at a time.')
         actual=_dicom_plane(dataset)
         if actual is not None and declared is not None and actual!=declared:
             raise InputError(f'DICOM geometry for {path.name} is {actual}, but its folder declares {declared}. Correct the plane folders and try again.')
@@ -195,7 +221,28 @@ def safe_dicom_series(entries, cfg):
     """Backwards-compatible strict reader for the documented plane-labelled DICOM ZIP route."""
     return safe_dicom_study(entries,cfg,require_declared=True)
 
-def _file_kind(name):
+def validate_dicom_modality(dataset):
+    modality=str(getattr(dataset,'Modality','')).upper().strip()
+    sop_class=str(getattr(dataset,'SOPClassUID',''))
+    mr_classes={'1.2.840.10008.5.1.4.1.1.4','1.2.840.10008.5.1.4.1.1.4.1','1.2.840.10008.5.1.4.1.1.4.3'}
+    if (modality and modality!='MR') or (not modality and sop_class not in mr_classes):
+        raise InputError('The DICOM modality is not a supported MRI image. CT, X-ray and non-image DICOM files are not accepted.')
+
+
+def _file_kind(name, data=None):
+    """Inspect binary signatures first; filenames remain hints for errors only."""
+    if data is not None:
+        if data.startswith(b'\x93NUMPY'):return 'npy'
+        if data.startswith((b'PK\x03\x04',b'PK\x05\x06',b'PK\x07\x08')):return 'zip'
+        if len(data)>132 and data[128:132]==b'DICM':return 'dcm'
+        if len(data)>=348 and data[344:348] in (b'n+1\x00',b'ni1\x00'):return 'nifti'
+        if data.startswith(b'\x1f\x8b'):
+            try:
+                with gzip.GzipFile(fileobj=io.BytesIO(data)) as stream:header=stream.read(348)
+                if len(header)==348 and header[344:348]==b'n+1\x00':return 'nifti_gz'
+            except (OSError,EOFError):pass
+        if data.startswith(b'\x89PNG\r\n\x1a\n'):return 'png'
+        if data.startswith(b'\xff\xd8\xff'):return 'jpg'
     lowered=name.lower()
     if lowered.endswith('.nii.gz'): return 'nifti_gz'
     if lowered.endswith('.nii'): return 'nifti'
@@ -212,7 +259,7 @@ def load_uploads(files, cfg, plane_overrides=None):
         if plane in volumes: raise InputError(f'More than one {plane} stack was supplied. Upload one study at a time.')
         volumes[plane]=safe_npy(raw,cfg)
     def add_nifti(name,raw,key=None):
-        volume,details=_nifti_volume(raw,cfg,compressed=_file_kind(name)=='nifti_gz')
+        volume,details=_nifti_volume(raw,cfg,compressed=_file_kind(name,raw)=='nifti_gz')
         _,declared=_plane_from_path(name,planes,overrides.get(key or name) or overrides.get(name),allow_unknown=True)
         metadata_plane=details['plane']
         if (metadata_plane is not None and declared is not None
@@ -228,32 +275,35 @@ def load_uploads(files, cfg, plane_overrides=None):
         volumes[plane]=volume
     for upload_index,(name,raw) in enumerate(files):
         upload_key=_upload_identifier(name,upload_index)
-        kind=_file_kind(name)
+        kind=_file_kind(name,raw)
         if kind=='zip':
             try:
                 with zipfile.ZipFile(io.BytesIO(raw)) as z:
                     items=[i for i in z.infolist() if not i.is_dir()]
                     if not items: raise InputError('The study ZIP is empty.')
+                    if len(items)>cfg.get('max_dicom_files',768):raise InputError('The MRI archive contains too many files.')
+                    if len({i.filename for i in items})!=len(items):raise InputError('The MRI archive contains duplicate entry names.')
                     if sum(i.file_size for i in items)>cfg['max_upload_mb']*1024**2:
                         raise InputError('The uncompressed study ZIP exceeds the configured upload limit.')
-                    kinds={_file_kind(i.filename) for i in items}
+                    entries=[(i,z.read(i)) for i in items]
+                    kinds={_file_kind(i.filename,content) for i,content in entries}
                     if kinds=={'npy'}:
                         if len(items)>3: raise InputError('A NumPy study ZIP must contain at most three MRI stacks.')
-                        for i in items:add(i.filename,z.read(i),f'{upload_key}::{i.filename}')
+                        for i,content in entries:add(i.filename,content,f'{upload_key}::{i.filename}')
                     elif kinds=={'dcm'}:
                         if len(items)>cfg.get('max_dicom_files',768): raise InputError('The DICOM ZIP contains too many files.')
                         if volumes or dicom_entries: raise InputError('Upload one MRI study at a time; do not mix DICOM and processed arrays.')
-                        dicom_entries.extend((i.filename,z.read(i),f'{upload_key}::{i.filename}') for i in items)
+                        dicom_entries.extend((i.filename,content,f'{upload_key}::{i.filename}') for i,content in entries)
                     elif kinds.issubset({'nifti','nifti_gz'}):
                         if len(items)>3: raise InputError('A NIfTI study ZIP must contain at most three MRI volumes.')
-                        for i in items:add_nifti(i.filename,z.read(i),f'{upload_key}::{i.filename}')
+                        for i,content in entries:add_nifti(i.filename,content,f'{upload_key}::{i.filename}')
                     else:
                         raise InputError('A study ZIP must contain only one supported MRI type: .npy, .nii/.nii.gz, or .dcm slices.')
             except (zipfile.BadZipFile,RuntimeError) as e: raise InputError('The study ZIP is corrupt or encrypted.') from e
         elif kind=='npy': add(name,raw,upload_key)
         elif kind in ('nifti','nifti_gz'): add_nifti(name,raw,upload_key)
         elif kind=='dcm': dicom_entries.append((name,raw,upload_key))
-        else: raise InputError('Supported inputs are .npy, .nii, .nii.gz, .dcm, or a ZIP containing one supported MRI study. JPEG/PNG are not supported.')
+        else: raise InputError('Supported inputs are .npy, .npz, .nii, .nii.gz, .dcm, or a ZIP containing one supported MRI study. JPEG/PNG are not supported.')
     if dicom_entries:
         if volumes: raise InputError('Upload one MRI study at a time; do not mix DICOM and processed arrays.')
         volumes.update(safe_dicom_study(dicom_entries,cfg,overrides=overrides))

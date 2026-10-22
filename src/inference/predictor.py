@@ -1,20 +1,37 @@
 import argparse
 import hashlib
 import json
+import logging
 import threading
 from datetime import datetime,timezone
 import numpy as np
-import torch
-from torch import nn
+
+try:
+    import torch
+    from torch import nn
+    from src.models.study_model import StudyModel
+    HAS_TORCH = True
+except ImportError:
+    torch = None
+    nn = None
+    StudyModel = None
+    HAS_TORCH = False
+
 from src.utils import config,resolve,get_device,seed_everything
 from src.data.preprocessing import prepare,load_uploads,InputError
-from src.models.study_model import StudyModel
+
+logger = logging.getLogger(__name__)
 
 class Predictor:
     def __init__(self,path=None,cfg=None,calibration_override=None,thresholds_override=None):
+        if not HAS_TORCH:
+            raise RuntimeError("PyTorch is required for Predictor inference.")
         self.cfg=cfg or config();self.device=get_device(self.cfg)
         seed_everything(self.cfg['seed'],self.cfg['training']['cpu_threads'])
-        path=resolve(path or self.cfg['evaluation']['checkpoint'])
+        checkpoint_path=path or self.cfg['evaluation'].get('checkpoint')
+        if not checkpoint_path:
+            raise InputError('Supply a registered checkpoint explicitly. The dashboard uses validation-based target routing through the model registry.')
+        path=resolve(checkpoint_path)
         if not path.exists():raise InputError('The trained model is not available yet. Finish training before analysing cases.')
         # Only application-owned local checkpoints are loaded, never uploaded models.
         saved=torch.load(path,map_location=self.device,weights_only=False)
@@ -38,7 +55,10 @@ class Predictor:
         except RuntimeError as e:
             if 'size mismatch' in str(e):
                 # Fallback to original aggregation method for compatibility
-                print(f"Warning: Checkpoint dimension mismatch. Using original aggregation method.")
+                logger.warning(
+                    "Checkpoint dimension mismatch for %s. Falling back to 'mean_max' aggregation method for backward compatibility.",
+                    self.checkpoint_name,
+                )
                 self.model.aggregation_method = 'mean_max'
                 # Rebuild model with original dimensions
                 dim = self.model.plane_dim * len(self.model.planes)
@@ -160,6 +180,26 @@ def text_summary(result):
             result['confidence_note'],result['probability_note'],'']
     if 'uncertainty_note' in result:
         lines+=[result['uncertainty_note'],'']
+    dynamic=result.get('dynamic_selection')
+    if dynamic:
+        lines += [
+            'Selection mode: Dynamic case-specific model selection',
+            f"Models evaluated: {dynamic['models_evaluated']} of 5",
+            f"Selected architecture: {dynamic['selected_architecture']}",
+            f"Estimated mean Brier loss: {dynamic['expected_losses'][dynamic['selected_model_id']]:.4f} (lower preferred)",
+            dynamic['selection_rule'],dynamic['interpretation'],'',
+            'All-five-model predictions (general abnormality / ACL / meniscus):',
+        ]
+        for model_id,probabilities in dynamic['base_probabilities'].items():
+            lines.append(f"{model_id}: "+' / '.join(f'{p:.1%}' for p in probabilities)+f"; estimated loss {dynamic['expected_losses'][model_id]:.4f}")
+        lines += ['',f"End-to-end analysis time: {dynamic['total_seconds']:.2f} seconds",
+                  'Selector SHA256: '+dynamic['selector_artifact_sha256'],
+                  'Split SHA256: '+str(dynamic.get('split_sha256')),
+                  'Explanation status: '+result.get('explanation_status','Not requested'), '']
+        if result.get('input_intake'):
+            lines += ['Data intake:']
+            for item in result['input_intake'].get('files',[]):
+                lines.append(f"{item['format']}; shape {item.get('shape')}; plane {item.get('detected_plane') or 'manually confirmed'}")
     lines+=[result['warning'],result['attention_note']]
     if result['missing_planes']:lines+=['Missing sequences: '+', '.join(result['missing_planes']),result['incomplete_study_warning']]
     return '\n'.join(lines)

@@ -15,9 +15,14 @@ __pycache__/
 data/*
 !data/README.md
 !data/.gitkeep
+!data/clinical_validation_template/
+!data/clinical_validation_template/**
 !data/archives/
 data/archives/*
 !data/archives/README.md
+# Real clinical studies must stay in a separately governed private location.
+# The committed clinical_validation_template contains only blank templates and guidance.
+data/clinical_validation_private/
 sample_cases/*
 !sample_cases/README.md
 !sample_cases/.gitkeep

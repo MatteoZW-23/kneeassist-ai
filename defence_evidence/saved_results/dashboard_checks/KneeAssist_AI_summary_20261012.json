@@ -1,0 +1,709 @@
+{
+  "system": "KneeAssist XAI V1",
+  "case_reference": "Not supplied",
+  "created_at": "2026-10-12T18:34:56.755424+00:00",
+  "architecture": "validation-based target routing",
+  "training_stage": "multiple independently trained research routes",
+  "checkpoint_file": "multiple registered research checkpoints",
+  "checkpoint_sha256": null,
+  "training_dataset": "MRNet-v1.0",
+  "findings": [
+    {
+      "key": "abnormal",
+      "finding": "General Abnormality",
+      "probability": 0.3133071029858498,
+      "threshold": 0.5560261112538963,
+      "flagged": false,
+      "uncertainty": 0.15176915782744263,
+      "uncertainty_level": "moderate",
+      "status": "Below research threshold",
+      "model_id": "family_densenet121",
+      "model_architecture": "densenet121",
+      "selection_reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity."
+    },
+    {
+      "key": "acl",
+      "finding": "ACL Tear",
+      "probability": 0.07873301940030002,
+      "threshold": 0.12931322044067206,
+      "flagged": false,
+      "uncertainty": 0.04717867904344758,
+      "uncertainty_level": "small",
+      "status": "Below research threshold",
+      "model_id": "family_resnet18",
+      "model_architecture": "resnet18",
+      "selection_reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity."
+    },
+    {
+      "key": "meniscus",
+      "finding": "Meniscal Tear",
+      "probability": 0.06154923422106909,
+      "threshold": 0.3102556632224127,
+      "flagged": false,
+      "uncertainty": 0.050049478048165424,
+      "uncertainty_level": "small",
+      "status": "Below research threshold",
+      "model_id": "family_swin_t",
+      "model_architecture": "swin_t",
+      "selection_reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity."
+    }
+  ],
+  "available_planes": [
+    "axial",
+    "coronal",
+    "sagittal"
+  ],
+  "missing_planes": [],
+  "sampled_slices": {
+    "axial": [
+      0,
+      2,
+      4,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      20,
+      22,
+      24
+    ],
+    "coronal": [
+      0,
+      2,
+      4,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      20,
+      22,
+      24
+    ],
+    "sagittal": [
+      0,
+      2,
+      5,
+      7,
+      9,
+      12,
+      14,
+      17,
+      19,
+      21,
+      24,
+      26
+    ]
+  },
+  "scoring_mode": "deterministic_calibrated_eval",
+  "model_confidence": "Not established for clinical use",
+  "score_separation": "near threshold",
+  "confidence_note": "Distance from a research threshold is not confidence, reliability, or a probability that the model is correct.",
+  "probability_note": "Each route's probabilities were calibrated on a small reserved MRNet development subset; clinical and external calibration are not established.",
+  "uncertainty_note": "Exploratory MC-dropout probability variation: 0.083 (small). It does not change the deterministic calibrated score or research threshold status, and is not a calibrated measure of diagnostic uncertainty or correctness.",
+  "warning": "Decision-support output. Clinical review required. Below-threshold results do not rule out injury.",
+  "attention_note": "Heatmaps show positive contribution to a selected model score. They do not localise or confirm lesions.",
+  "incomplete_study_warning": null,
+  "selected_models": {
+    "abnormal": {
+      "model_id": "family_densenet121",
+      "architecture": "densenet121",
+      "reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity.",
+      "checkpoint_sha256": "a8c7e4c1d5103d7497a26d0690eca43a9e0be2ba1cba29181626ce3f88834d33"
+    },
+    "acl": {
+      "model_id": "family_resnet18",
+      "architecture": "resnet18",
+      "reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity.",
+      "checkpoint_sha256": "39af24d0a0dd64328dd532d3582e073df9c71e5bad10340e44fa6e565257bec0"
+    },
+    "meniscus": {
+      "model_id": "family_swin_t",
+      "architecture": "swin_t",
+      "reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity.",
+      "checkpoint_sha256": "2cc4c4fcadea919e5a0e0d1fb3688cfc748af502617fac7311d97f37204476a3"
+    }
+  },
+  "routing_note": "For each finding, the system checked the uploaded MRI planes and selected the highest-ranked compatible registered candidate using saved MRNet validation evidence. It did not select a model from the individual study's predicted score.",
+  "input_intake": {
+    "files": [
+      {
+        "id": "upload-0::mrnet_1130.zip::axial.npy",
+        "file": "axial.npy",
+        "format": "NumPy MRI stack",
+        "shape": [
+          25,
+          256,
+          256
+        ],
+        "slices": 25,
+        "height": 256,
+        "width": 256,
+        "dtype": "uint8",
+        "intensity_min": 0.0,
+        "intensity_max": 255.0,
+        "has_invalid_values": false,
+        "detected_plane": "axial",
+        "plane_confidence": null,
+        "plane_method": "Filename hint only; no anatomical metadata",
+        "requires_confirmation": false,
+        "status": "Accepted for model compatibility check"
+      },
+      {
+        "id": "upload-0::mrnet_1130.zip::coronal.npy",
+        "file": "coronal.npy",
+        "format": "NumPy MRI stack",
+        "shape": [
+          25,
+          256,
+          256
+        ],
+        "slices": 25,
+        "height": 256,
+        "width": 256,
+        "dtype": "uint8",
+        "intensity_min": 0.0,
+        "intensity_max": 255.0,
+        "has_invalid_values": false,
+        "detected_plane": "coronal",
+        "plane_confidence": null,
+        "plane_method": "Filename hint only; no anatomical metadata",
+        "requires_confirmation": false,
+        "status": "Accepted for model compatibility check"
+      },
+      {
+        "id": "upload-0::mrnet_1130.zip::sagittal.npy",
+        "file": "sagittal.npy",
+        "format": "NumPy MRI stack",
+        "shape": [
+          27,
+          256,
+          256
+        ],
+        "slices": 27,
+        "height": 256,
+        "width": 256,
+        "dtype": "uint8",
+        "intensity_min": 0.0,
+        "intensity_max": 255.0,
+        "has_invalid_values": false,
+        "detected_plane": "sagittal",
+        "plane_confidence": null,
+        "plane_method": "Filename hint only; no anatomical metadata",
+        "requires_confirmation": false,
+        "status": "Accepted for model compatibility check"
+      }
+    ],
+    "available_planes": [
+      "axial",
+      "coronal",
+      "sagittal"
+    ],
+    "requires_confirmation": []
+  },
+  "model_selection": {
+    "policy": {
+      "name": "input_compatible_validated_candidate_selection_v1",
+      "weights": {
+        "auroc": 0.45,
+        "sensitivity": 0.3,
+        "average_precision": 0.15,
+        "f1": 0.1
+      },
+      "rule": "After an MRI study is inspected, the selector filters locally available models by uploaded-plane compatibility and minimum-plane requirements. For each target, it chooses the candidate with the highest saved weighted validation score (AUROC 45%, sensitivity 30%, average precision 15%, F1 10%) from the fixed MRNet tuning partition.",
+      "patient_score_guard": "The selector never runs several models and chooses the largest probability for the uploaded case. A model prediction is produced only after the validation-evidence selection is complete.",
+      "candidate_pool": [
+        "active_efficientnet_b0",
+        "family_densenet121",
+        "family_resnet18",
+        "family_swin_t"
+      ],
+      "evidence_scope": "MRNet development evidence only; selection does not establish independent external or clinical performance."
+    },
+    "available_planes": [
+      "axial",
+      "coronal",
+      "sagittal"
+    ],
+    "compatible_models": [
+      "active_efficientnet_b0",
+      "family_densenet121",
+      "family_resnet18",
+      "family_swin_t"
+    ],
+    "candidates_by_target": {
+      "abnormal": [
+        {
+          "model_id": "family_densenet121",
+          "architecture": "densenet121",
+          "selection_score": 0.8955475782667992,
+          "metrics": {
+            "auroc": 0.8813063921718134,
+            "average_precision": 0.9721906643979868,
+            "f1": 0.8919667590027701,
+            "sensitivity": 0.8797814207650273,
+            "specificity": 0.6046511627906976,
+            "precision": 0.9044943820224719,
+            "accuracy": 0.827433628318584,
+            "threshold": 0.5560261112538963,
+            "confusion_matrix": [
+              [
+                26,
+                17
+              ],
+              [
+                22,
+                161
+              ]
+            ],
+            "positive_cases": 183,
+            "negative_cases": 43
+          }
+        },
+        {
+          "model_id": "family_resnet18",
+          "architecture": "resnet18",
+          "selection_score": 0.887643951053268,
+          "metrics": {
+            "auroc": 0.8762866946244758,
+            "average_precision": 0.9702300005720712,
+            "f1": 0.8876404494382022,
+            "sensitivity": 0.8633879781420765,
+            "specificity": 0.6511627906976745,
+            "precision": 0.9132947976878613,
+            "accuracy": 0.8230088495575221,
+            "threshold": 0.5327598910513753,
+            "confusion_matrix": [
+              [
+                28,
+                15
+              ],
+              [
+                25,
+                158
+              ]
+            ],
+            "positive_cases": 183,
+            "negative_cases": 43
+          }
+        },
+        {
+          "model_id": "active_efficientnet_b0",
+          "architecture": "efficientnet_b0",
+          "selection_score": 0.8810443685483584,
+          "metrics": {
+            "auroc": 0.8918541110687507,
+            "average_precision": 0.9739272065169617,
+            "f1": 0.8771929824561403,
+            "sensitivity": 0.819672131147541,
+            "specificity": 0.7906976744186046,
+            "precision": 0.9433962264150944,
+            "accuracy": 0.8141592920353983,
+            "threshold": 0.6943677953637496,
+            "confusion_matrix": [
+              [
+                34,
+                9
+              ],
+              [
+                33,
+                150
+              ]
+            ],
+            "positive_cases": 183,
+            "negative_cases": 43
+          }
+        },
+        {
+          "model_id": "family_swin_t",
+          "architecture": "swin_t",
+          "selection_score": 0.856922166715535,
+          "metrics": {
+            "auroc": 0.8901385182361163,
+            "average_precision": 0.9732265589943115,
+            "f1": 0.8414634146341463,
+            "sensitivity": 0.7540983606557377,
+            "specificity": 0.8372093023255814,
+            "precision": 0.9517241379310345,
+            "accuracy": 0.7699115044247787,
+            "threshold": 0.7644956540307505,
+            "confusion_matrix": [
+              [
+                36,
+                7
+              ],
+              [
+                45,
+                138
+              ]
+            ],
+            "positive_cases": 183,
+            "negative_cases": 43
+          }
+        }
+      ],
+      "acl": [
+        {
+          "model_id": "family_resnet18",
+          "architecture": "resnet18",
+          "selection_score": 0.7716227092128397,
+          "metrics": {
+            "auroc": 0.8197463768115942,
+            "average_precision": 0.650626550031768,
+            "f1": 0.48,
+            "sensitivity": 0.8571428571428571,
+            "specificity": 0.6086956521739131,
+            "precision": 0.3333333333333333,
+            "accuracy": 0.6548672566371682,
+            "threshold": 0.12931322044067206,
+            "confusion_matrix": [
+              [
+                112,
+                72
+              ],
+              [
+                6,
+                36
+              ]
+            ],
+            "positive_cases": 42,
+            "negative_cases": 184
+          }
+        },
+        {
+          "model_id": "family_densenet121",
+          "architecture": "densenet121",
+          "selection_score": 0.7612859870766253,
+          "metrics": {
+            "auroc": 0.8171583850931677,
+            "average_precision": 0.6150005166715897,
+            "f1": 0.44171779141104295,
+            "sensitivity": 0.8571428571428571,
+            "specificity": 0.5380434782608695,
+            "precision": 0.2975206611570248,
+            "accuracy": 0.5973451327433629,
+            "threshold": 0.12059684609058874,
+            "confusion_matrix": [
+              [
+                99,
+                85
+              ],
+              [
+                6,
+                36
+              ]
+            ],
+            "positive_cases": 42,
+            "negative_cases": 184
+          }
+        },
+        {
+          "model_id": "family_swin_t",
+          "architecture": "swin_t",
+          "selection_score": 0.7610266803639887,
+          "metrics": {
+            "auroc": 0.8126940993788819,
+            "average_precision": 0.6230065440414985,
+            "f1": 0.4472049689440994,
+            "sensitivity": 0.8571428571428571,
+            "specificity": 0.5489130434782609,
+            "precision": 0.3025210084033613,
+            "accuracy": 0.6061946902654868,
+            "threshold": 0.13489402025413108,
+            "confusion_matrix": [
+              [
+                101,
+                83
+              ],
+              [
+                6,
+                36
+              ]
+            ],
+            "positive_cases": 42,
+            "negative_cases": 184
+          }
+        },
+        {
+          "model_id": "active_efficientnet_b0",
+          "architecture": "efficientnet_b0",
+          "selection_score": 0.7316950609090281,
+          "metrics": {
+            "auroc": 0.8196169772256728,
+            "average_precision": 0.6733838858836185,
+            "f1": 0.5471698113207547,
+            "sensitivity": 0.6904761904761905,
+            "specificity": 0.8097826086956522,
+            "precision": 0.453125,
+            "accuracy": 0.7876106194690266,
+            "threshold": 0.24608272654141142,
+            "confusion_matrix": [
+              [
+                149,
+                35
+              ],
+              [
+                13,
+                29
+              ]
+            ],
+            "positive_cases": 42,
+            "negative_cases": 184
+          }
+        }
+      ],
+      "meniscus": [
+        {
+          "model_id": "family_swin_t",
+          "architecture": "swin_t",
+          "selection_score": 0.7952639589322147,
+          "metrics": {
+            "auroc": 0.8158098682510979,
+            "average_precision": 0.6654571822296643,
+            "f1": 0.7010309278350515,
+            "sensitivity": 0.8607594936708861,
+            "specificity": 0.6802721088435374,
+            "precision": 0.591304347826087,
+            "accuracy": 0.7433628318584071,
+            "threshold": 0.3102556632224127,
+            "confusion_matrix": [
+              [
+                100,
+                47
+              ],
+              [
+                11,
+                68
+              ]
+            ],
+            "positive_cases": 79,
+            "negative_cases": 147
+          }
+        },
+        {
+          "model_id": "active_efficientnet_b0",
+          "architecture": "efficientnet_b0",
+          "selection_score": 0.7833020561046208,
+          "metrics": {
+            "auroc": 0.8480151554292603,
+            "average_precision": 0.7492963503791504,
+            "f1": 0.6904761904761905,
+            "sensitivity": 0.7341772151898734,
+            "specificity": 0.7891156462585034,
+            "precision": 0.651685393258427,
+            "accuracy": 0.7699115044247787,
+            "threshold": 0.4807751497984078,
+            "confusion_matrix": [
+              [
+                116,
+                31
+              ],
+              [
+                21,
+                58
+              ]
+            ],
+            "positive_cases": 79,
+            "negative_cases": 147
+          }
+        },
+        {
+          "model_id": "family_resnet18",
+          "architecture": "resnet18",
+          "selection_score": 0.7811140326081203,
+          "metrics": {
+            "auroc": 0.8217514854042883,
+            "average_precision": 0.6843124256774706,
+            "f1": 0.6564102564102564,
+            "sensitivity": 0.810126582278481,
+            "specificity": 0.6462585034013606,
+            "precision": 0.5517241379310345,
+            "accuracy": 0.7035398230088495,
+            "threshold": 0.31215603288990074,
+            "confusion_matrix": [
+              [
+                95,
+                52
+              ],
+              [
+                15,
+                64
+              ]
+            ],
+            "positive_cases": 79,
+            "negative_cases": 147
+          }
+        },
+        {
+          "model_id": "family_densenet121",
+          "architecture": "densenet121",
+          "selection_score": 0.7026460989113371,
+          "metrics": {
+            "auroc": 0.8079307672436065,
+            "average_precision": 0.6637151996968358,
+            "f1": 0.6103896103896104,
+            "sensitivity": 0.5949367088607594,
+            "specificity": 0.8095238095238095,
+            "precision": 0.6266666666666667,
+            "accuracy": 0.7345132743362832,
+            "threshold": 0.5084952717280833,
+            "confusion_matrix": [
+              [
+                119,
+                28
+              ],
+              [
+                32,
+                47
+              ]
+            ],
+            "positive_cases": 79,
+            "negative_cases": 147
+          }
+        }
+      ]
+    },
+    "selections": [
+      {
+        "target": "abnormal",
+        "status": "Selected",
+        "model_id": "family_densenet121",
+        "architecture": "densenet121",
+        "version": "upload-time-selection-v1",
+        "selection_score": 0.8955475782667992,
+        "metrics": {
+          "auroc": 0.8813063921718134,
+          "average_precision": 0.9721906643979868,
+          "f1": 0.8919667590027701,
+          "sensitivity": 0.8797814207650273,
+          "specificity": 0.6046511627906976,
+          "precision": 0.9044943820224719,
+          "accuracy": 0.827433628318584,
+          "threshold": 0.5560261112538963,
+          "confusion_matrix": [
+            [
+              26,
+              17
+            ],
+            [
+              22,
+              161
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity.",
+        "checkpoint": "runs/model_family_v2/models/densenet121_best.pth",
+        "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated."
+      },
+      {
+        "target": "acl",
+        "status": "Selected",
+        "model_id": "family_resnet18",
+        "architecture": "resnet18",
+        "version": "upload-time-selection-v1",
+        "selection_score": 0.7716227092128397,
+        "metrics": {
+          "auroc": 0.8197463768115942,
+          "average_precision": 0.650626550031768,
+          "f1": 0.48,
+          "sensitivity": 0.8571428571428571,
+          "specificity": 0.6086956521739131,
+          "precision": 0.3333333333333333,
+          "accuracy": 0.6548672566371682,
+          "threshold": 0.12931322044067206,
+          "confusion_matrix": [
+            [
+              112,
+              72
+            ],
+            [
+              6,
+              36
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity.",
+        "checkpoint": "runs/model_family_v2/models/resnet18_best.pth",
+        "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated."
+      },
+      {
+        "target": "meniscus",
+        "status": "Selected",
+        "model_id": "family_swin_t",
+        "architecture": "swin_t",
+        "version": "upload-time-selection-v1",
+        "selection_score": 0.7952639589322147,
+        "metrics": {
+          "auroc": 0.8158098682510979,
+          "average_precision": 0.6654571822296643,
+          "f1": 0.7010309278350515,
+          "sensitivity": 0.8607594936708861,
+          "specificity": 0.6802721088435374,
+          "precision": 0.591304347826087,
+          "accuracy": 0.7433628318584071,
+          "threshold": 0.3102556632224127,
+          "confusion_matrix": [
+            [
+              100,
+              47
+            ],
+            [
+              11,
+              68
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "reason": "Selected after upload from 4 compatible validated research model(s): highest fixed validation-evidence score, weighted toward AUROC and sensitivity.",
+        "checkpoint": "runs/model_family_v2/models/swin_t_best.pth",
+        "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated."
+      }
+    ]
+  },
+  "ensemble_plan": {
+    "policy": {
+      "status": "disabled",
+      "rule": "This is target routing, not a probability ensemble. No weighted ensemble is active."
+    },
+    "available_planes": [
+      "axial",
+      "coronal",
+      "sagittal"
+    ],
+    "plans": [
+      {
+        "target": "abnormal",
+        "status": "Single-model fallback",
+        "reason": "No compatible ensemble with locked evidence of validation improvement is registered."
+      },
+      {
+        "target": "acl",
+        "status": "Single-model fallback",
+        "reason": "No compatible ensemble with locked evidence of validation improvement is registered."
+      },
+      {
+        "target": "meniscus",
+        "status": "Single-model fallback",
+        "reason": "No compatible ensemble with locked evidence of validation improvement is registered."
+      }
+    ]
+  },
+  "localization_status": {
+    "detection": {
+      "available": false,
+      "reason": "No trained and validated detection model is registered. MRI localisation labels and a locked evaluation are required before this feature can be enabled."
+    },
+    "segmentation": {
+      "available": false,
+      "reason": "No trained and validated segmentation model is registered. MRI localisation labels and a locked evaluation are required before this feature can be enabled."
+    }
+  }
+}

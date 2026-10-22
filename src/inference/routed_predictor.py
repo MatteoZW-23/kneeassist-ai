@@ -11,10 +11,11 @@ from src.utils import ROOT
 
 
 class RoutedPredictor:
-    """Run only the registered validated model assigned to each target.
+    """Run the best compatible registered model selected for each target.
 
-    Routing is fixed from pre-upload validation evidence. It never picks the
-    model with the largest score for an individual study.
+    Candidate filtering and comparison happen after upload inspection, using
+    saved validation evidence. The predictor never picks the model with the
+    largest score for an individual study.
     """
 
     def __init__(self, cfg: dict):
@@ -106,8 +107,9 @@ class RoutedPredictor:
             for target in self.cfg["targets"]
         }
         base["routing_note"] = (
-            "Each finding uses the compatible registered model selected before upload from fixed development-validation evidence. "
-            "The system does not choose a model from the individual study's predicted score."
+            "For each finding, the system checked the uploaded MRI planes and selected the highest-ranked "
+            "compatible registered candidate using saved MRNet validation evidence. It did not select a model "
+            "from the individual study's predicted score."
         )
         return base
 

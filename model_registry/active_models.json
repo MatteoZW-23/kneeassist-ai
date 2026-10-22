@@ -1,22 +1,38 @@
 {
-  "registry_version": "2.0",
-  "routing_status": "active_development_routing",
+  "registry_version": "3.1",
+  "routing_status": "archived_fixed_routing_fallback",
   "selection_policy": {
-    "name": "validated_research_score_v1",
+    "name": "archived_fixed_candidate_selection_v1",
     "weights": {
       "auroc": 0.45,
       "sensitivity": 0.3,
       "average_precision": 0.15,
       "f1": 0.1
     },
-    "rule": "For each target, only a checkpoint preselected from the fixed tuning partition and compatible with the uploaded MRI planes is eligible. The score weights AUROC, sensitivity, average precision (AP; a precision-recall-curve summary), and F1. Individual prediction scores never select a model.",
-    "metric_correction": "On 8 October 2026 the 0.15 AP component was mapped to the saved average_precision metric. Recalculation retained DenseNet-121 (abnormal), ResNet-18 (ACL), and Swin-T (meniscus)."
+    "rule": "This fixed, target-specific route is retained only as a fallback when the active dynamic_selection_v1 workflow is deliberately disabled. It filters the five-model benchmark population by uploaded-plane compatibility. For each target it chooses the candidate with the highest saved weighted validation score from the fixed 226-study MRNet tuning partition (AUROC 45%, sensitivity 30%, average precision 15%, F1 10%), then verifies that the saved checkpoint is locally registered before inference.",
+    "patient_score_guard": "This archived fallback never chooses a model from the largest probability for an uploaded case.",
+    "candidate_pool": [
+      "family_resnet18",
+      "family_resnet50",
+      "family_densenet121",
+      "family_efficientnet_b0",
+      "family_swin_t"
+    ],
+    "evidence_scope": "MRNet development evidence only; selection does not establish independent external or clinical performance.",
+    "candidate_population": "Five architectures trained and evaluated with the same saved MRNet protocol: ResNet-18, ResNet-50, DenseNet-121, EfficientNet-B0 and Swin Transformer.",
+    "calibration_component": {
+      "included": false,
+      "reason": "The locked score uses AUROC, sensitivity, average precision and F1-score only. Brier score and log loss were retained for calibration reporting, but ECE was not retained and no calibration weight is inferred."
+    }
   },
   "routing_evidence": {
     "portfolio_report": "runs/model_portfolio_v1/portfolio_report.json",
     "final_development_evaluation": "runs/model_portfolio_v1/final/metrics.json",
-    "selection_partition": "MRNet tuning partition",
-    "final_partition": "MRNet official validation previously used in development; not independent clinical validation."
+    "selection_partition": "MRNet fixed tuning partition",
+    "final_partition": "MRNet official validation previously used in development; not independent clinical validation.",
+    "selection_process": "Archived fallback only: target-specific comparison of registered candidate evidence when dynamic_selection_v1 is disabled.",
+    "benchmark_population": "runs/model_portfolio_v1/portfolio_report.json (five-architecture benchmark)",
+    "checkpoint_availability_rule": "A lower-ranked candidate is never substituted if the validation winner is unavailable."
   },
   "ensemble_policy": {
     "status": "disabled",
@@ -28,11 +44,13 @@
     {
       "id": "family_densenet121",
       "architecture": "densenet121",
-      "version": "portfolio-routing-v1",
+      "version": "upload-time-selection-v1",
       "checkpoint": "runs/model_family_v2/models/densenet121_best.pth",
       "training_dataset": "MRNet-v1.0",
       "supported_targets": [
-        "abnormal"
+        "abnormal",
+        "acl",
+        "meniscus"
       ],
       "supported_planes": [
         "axial",
@@ -102,6 +120,59 @@
           ],
           "positive_cases": 183,
           "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8171583850931677,
+          "average_precision": 0.6150005166715897,
+          "f1": 0.44171779141104295,
+          "sensitivity": 0.8571428571428571,
+          "specificity": 0.5380434782608695,
+          "precision": 0.2975206611570248,
+          "accuracy": 0.5973451327433629,
+          "threshold": 0.12059684609058874,
+          "confusion_matrix": [
+            [
+              99,
+              85
+            ],
+            [
+              6,
+              36
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8079307672436065,
+          "average_precision": 0.6637151996968358,
+          "f1": 0.6103896103896104,
+          "sensitivity": 0.5949367088607594,
+          "specificity": 0.8095238095238095,
+          "precision": 0.6266666666666667,
+          "accuracy": 0.7345132743362832,
+          "threshold": 0.5084952717280833,
+          "confusion_matrix": [
+            [
+              119,
+              28
+            ],
+            [
+              32,
+              47
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8354651815028626,
+          "average_precision": 0.7503021269221374,
+          "f1": 0.6480247202678079,
+          "sensitivity": 0.777286995589548,
+          "specificity": 0.6507394835251256,
+          "precision": 0.6095605699487211,
+          "accuracy": 0.71976401179941
         }
       },
       "final_development_metrics": {
@@ -128,18 +199,22 @@
           "negative_cases": 25
         }
       },
-      "inference_profile": "Local PyTorch study-level inference; target-specific routing from pre-upload validation evidence.",
+      "inference_profile": "Local PyTorch study-level inference; eligible for upload-time selection using fixed MRNet tuning-partition evidence.",
       "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated.",
-      "checkpoint_sha256": "a8c7e4c1d5103d7497a26d0690eca43a9e0be2ba1cba29181626ce3f88834d33"
+      "checkpoint_sha256": "a8c7e4c1d5103d7497a26d0690eca43a9e0be2ba1cba29181626ce3f88834d33",
+      "candidate_status": "eligible_validated_candidate",
+      "deployment_status": "selected"
     },
     {
       "id": "family_resnet18",
       "architecture": "resnet18",
-      "version": "portfolio-routing-v1",
+      "version": "upload-time-selection-v1",
       "checkpoint": "runs/model_family_v2/models/resnet18_best.pth",
       "training_dataset": "MRNet-v1.0",
       "supported_targets": [
-        "acl"
+        "abnormal",
+        "acl",
+        "meniscus"
       ],
       "supported_planes": [
         "axial",
@@ -188,6 +263,28 @@
         }
       },
       "validation_metrics": {
+        "abnormal": {
+          "auroc": 0.8762866946244758,
+          "average_precision": 0.9702300005720712,
+          "f1": 0.8876404494382022,
+          "sensitivity": 0.8633879781420765,
+          "specificity": 0.6511627906976745,
+          "precision": 0.9132947976878613,
+          "accuracy": 0.8230088495575221,
+          "threshold": 0.5327598910513753,
+          "confusion_matrix": [
+            [
+              28,
+              15
+            ],
+            [
+              25,
+              158
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
         "acl": {
           "auroc": 0.8197463768115942,
           "average_precision": 0.650626550031768,
@@ -209,6 +306,37 @@
           ],
           "positive_cases": 42,
           "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8217514854042883,
+          "average_precision": 0.6843124256774706,
+          "f1": 0.6564102564102564,
+          "sensitivity": 0.810126582278481,
+          "specificity": 0.6462585034013606,
+          "precision": 0.5517241379310345,
+          "accuracy": 0.7035398230088495,
+          "threshold": 0.31215603288990074,
+          "confusion_matrix": [
+            [
+              95,
+              52
+            ],
+            [
+              15,
+              64
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8392615189467861,
+          "average_precision": 0.7683896587604367,
+          "f1": 0.6746835686161529,
+          "sensitivity": 0.8435524725211382,
+          "specificity": 0.635372315424316,
+          "precision": 0.5994507563174097,
+          "accuracy": 0.7271386430678466
         }
       },
       "final_development_metrics": {
@@ -235,17 +363,21 @@
           "negative_cases": 66
         }
       },
-      "inference_profile": "Local PyTorch study-level inference; target-specific routing from pre-upload validation evidence.",
+      "inference_profile": "Local PyTorch study-level inference; eligible for upload-time selection using fixed MRNet tuning-partition evidence.",
       "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated.",
-      "checkpoint_sha256": "39af24d0a0dd64328dd532d3582e073df9c71e5bad10340e44fa6e565257bec0"
+      "checkpoint_sha256": "39af24d0a0dd64328dd532d3582e073df9c71e5bad10340e44fa6e565257bec0",
+      "candidate_status": "eligible_validated_candidate",
+      "deployment_status": "selected"
     },
     {
       "id": "family_swin_t",
       "architecture": "swin_t",
-      "version": "portfolio-routing-v1",
+      "version": "upload-time-selection-v1",
       "checkpoint": "runs/model_family_v2/models/swin_t_best.pth",
       "training_dataset": "MRNet-v1.0",
       "supported_targets": [
+        "abnormal",
+        "acl",
         "meniscus"
       ],
       "supported_planes": [
@@ -295,6 +427,50 @@
         }
       },
       "validation_metrics": {
+        "abnormal": {
+          "auroc": 0.8901385182361163,
+          "average_precision": 0.9732265589943115,
+          "f1": 0.8414634146341463,
+          "sensitivity": 0.7540983606557377,
+          "specificity": 0.8372093023255814,
+          "precision": 0.9517241379310345,
+          "accuracy": 0.7699115044247787,
+          "threshold": 0.7644956540307505,
+          "confusion_matrix": [
+            [
+              36,
+              7
+            ],
+            [
+              45,
+              138
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8126940993788819,
+          "average_precision": 0.6230065440414985,
+          "f1": 0.4472049689440994,
+          "sensitivity": 0.8571428571428571,
+          "specificity": 0.5489130434782609,
+          "precision": 0.3025210084033613,
+          "accuracy": 0.6061946902654868,
+          "threshold": 0.13489402025413108,
+          "confusion_matrix": [
+            [
+              101,
+              83
+            ],
+            [
+              6,
+              36
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
         "meniscus": {
           "auroc": 0.8158098682510979,
           "average_precision": 0.6654571822296643,
@@ -316,6 +492,15 @@
           ],
           "positive_cases": 79,
           "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8395474952886987,
+          "average_precision": 0.7538967617551581,
+          "f1": 0.6632331038044325,
+          "sensitivity": 0.8240002371564937,
+          "specificity": 0.6887981515491265,
+          "precision": 0.615183164720161,
+          "accuracy": 0.7064896755162242
         }
       },
       "final_development_metrics": {
@@ -342,9 +527,784 @@
           "negative_cases": 68
         }
       },
-      "inference_profile": "Local PyTorch study-level inference; target-specific routing from pre-upload validation evidence.",
+      "inference_profile": "Local PyTorch study-level inference; eligible for upload-time selection using fixed MRNet tuning-partition evidence.",
       "limitations": "MRNet-only development evidence; study-level split; patient linkage unavailable; official validation previously used in development; not clinically validated.",
-      "checkpoint_sha256": "2cc4c4fcadea919e5a0e0d1fb3688cfc748af502617fac7311d97f37204476a3"
+      "checkpoint_sha256": "2cc4c4fcadea919e5a0e0d1fb3688cfc748af502617fac7311d97f37204476a3",
+      "candidate_status": "eligible_validated_candidate",
+      "deployment_status": "selected"
     }
-  ]
+  ],
+  "benchmark_candidates": [
+    {
+      "id": "family_resnet18",
+      "status": "evaluated",
+      "architecture": "resnet18",
+      "checkpoint": "runs\\model_family_v2\\models\\resnet18_best.pth",
+      "checkpoint_sha256": "39af24d0a0dd64328dd532d3582e073df9c71e5bad10340e44fa6e565257bec0",
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1,
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.9307066299821039,
+            "bias": 1.0855654123809602
+          },
+          {
+            "scale": 0.6705046111235685,
+            "bias": -0.2307832474130697
+          },
+          {
+            "scale": 0.7056924964153091,
+            "bias": 0.02176318000279611
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "calibration_reliability": {
+        "abnormal": {
+          "brier": 0.11868258919287307,
+          "log_loss": 0.37302878999338374
+        },
+        "acl": {
+          "brier": 0.12464771393668299,
+          "log_loss": 0.3959158979920522
+        },
+        "meniscus": {
+          "brier": 0.1410681617604565,
+          "log_loss": 0.44907808974877644
+        }
+      },
+      "thresholds": {
+        "abnormal": 0.5327598910513753,
+        "acl": 0.12931322044067206,
+        "meniscus": 0.31215603288990074
+      },
+      "target_scores": {
+        "abnormal": 0.887643951053268,
+        "acl": 0.7716227092128397,
+        "meniscus": 0.7811140326081203
+      },
+      "validation_metrics": {
+        "abnormal": {
+          "auroc": 0.8762866946244758,
+          "average_precision": 0.9702300005720712,
+          "f1": 0.8876404494382022,
+          "sensitivity": 0.8633879781420765,
+          "specificity": 0.6511627906976745,
+          "precision": 0.9132947976878613,
+          "accuracy": 0.8230088495575221,
+          "threshold": 0.5327598910513753,
+          "confusion_matrix": [
+            [
+              28,
+              15
+            ],
+            [
+              25,
+              158
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8197463768115942,
+          "average_precision": 0.650626550031768,
+          "f1": 0.48,
+          "sensitivity": 0.8571428571428571,
+          "specificity": 0.6086956521739131,
+          "precision": 0.3333333333333333,
+          "accuracy": 0.6548672566371682,
+          "threshold": 0.12931322044067206,
+          "confusion_matrix": [
+            [
+              112,
+              72
+            ],
+            [
+              6,
+              36
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8217514854042883,
+          "average_precision": 0.6843124256774706,
+          "f1": 0.6564102564102564,
+          "sensitivity": 0.810126582278481,
+          "specificity": 0.6462585034013606,
+          "precision": 0.5517241379310345,
+          "accuracy": 0.7035398230088495,
+          "threshold": 0.31215603288990074,
+          "confusion_matrix": [
+            [
+              95,
+              52
+            ],
+            [
+              15,
+              64
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8392615189467861,
+          "average_precision": 0.7683896587604367,
+          "f1": 0.6746835686161529,
+          "sensitivity": 0.8435524725211382,
+          "specificity": 0.635372315424316,
+          "precision": 0.5994507563174097,
+          "accuracy": 0.7271386430678466
+        }
+      },
+      "model_version": "model_family_v2",
+      "preprocessing_configuration": {
+        "config": "configs/model_family_v2.yaml",
+        "image_size": 224,
+        "slices_per_plane": 12,
+        "normalisation": "per-volume percentile 1 to 99 then ImageNet channel normalisation",
+        "aggregation": "mean and max study-level pooling"
+      },
+      "benchmark_status": "evaluated",
+      "selection_partition": "fixed MRNet tuning partition (226 studies)",
+      "calibration_partition": "reserved MRNet calibration partition (100 studies)",
+      "inference_time_seconds": null,
+      "inference_time_note": "No per-candidate latency benchmark was retained; this field is intentionally blank rather than estimated.",
+      "runtime_checkpoint_available": true,
+      "runtime_status": "selected and locally installed"
+    },
+    {
+      "id": "family_resnet50",
+      "status": "evaluated",
+      "architecture": "resnet50",
+      "checkpoint": "runs\\model_family_v2\\models\\resnet50_best.pth",
+      "checkpoint_sha256": "8f3d50c21a3c50b3f14948c6d9d21b1c87b3986213ce5394dbc71ebdb0d048cd",
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1,
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.8998615545009553,
+            "bias": 1.1352661934728827
+          },
+          {
+            "scale": 0.6568671536317643,
+            "bias": -0.11298262322150138
+          },
+          {
+            "scale": 0.6638223095436684,
+            "bias": 0.09630688505749667
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "calibration_reliability": {
+        "abnormal": {
+          "brier": 0.12114006493905856,
+          "log_loss": 0.3817736039759962
+        },
+        "acl": {
+          "brier": 0.1277387793153582,
+          "log_loss": 0.40460138813857455
+        },
+        "meniscus": {
+          "brier": 0.14298077928643044,
+          "log_loss": 0.4509939934599428
+        }
+      },
+      "thresholds": {
+        "abnormal": 0.7292928772955314,
+        "acl": 0.17070059060099285,
+        "meniscus": 0.4724461292022968
+      },
+      "target_scores": {
+        "abnormal": 0.8629264404842252,
+        "acl": 0.7179750745477969,
+        "meniscus": 0.728510656682506
+      },
+      "validation_metrics": {
+        "abnormal": {
+          "auroc": 0.8799720421908757,
+          "average_precision": 0.971108980907489,
+          "f1": 0.8520710059171598,
+          "sensitivity": 0.7868852459016393,
+          "specificity": 0.7441860465116279,
+          "precision": 0.9290322580645162,
+          "accuracy": 0.7787610619469026,
+          "threshold": 0.7292928772955314,
+          "confusion_matrix": [
+            [
+              32,
+              11
+            ],
+            [
+              39,
+              144
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.7899844720496895,
+          "average_precision": 0.6174399379791012,
+          "f1": 0.484375,
+          "sensitivity": 0.7380952380952381,
+          "specificity": 0.7010869565217391,
+          "precision": 0.36046511627906974,
+          "accuracy": 0.7079646017699115,
+          "threshold": 0.17070059060099285,
+          "confusion_matrix": [
+            [
+              129,
+              55
+            ],
+            [
+              11,
+              31
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8123654525101179,
+          "average_precision": 0.6804214298415454,
+          "f1": 0.6341463414634146,
+          "sensitivity": 0.6582278481012658,
+          "specificity": 0.7755102040816326,
+          "precision": 0.611764705882353,
+          "accuracy": 0.7345132743362832,
+          "threshold": 0.4724461292022968,
+          "confusion_matrix": [
+            [
+              114,
+              33
+            ],
+            [
+              27,
+              52
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8274406555835611,
+          "average_precision": 0.7563234495760452,
+          "f1": 0.6568641157935248,
+          "sensitivity": 0.727736110699381,
+          "specificity": 0.7402610690383332,
+          "precision": 0.6337540267419796,
+          "accuracy": 0.7404129793510325
+        }
+      },
+      "model_version": "model_family_v2",
+      "preprocessing_configuration": {
+        "config": "configs/model_family_v2.yaml",
+        "image_size": 224,
+        "slices_per_plane": 12,
+        "normalisation": "per-volume percentile 1 to 99 then ImageNet channel normalisation",
+        "aggregation": "mean and max study-level pooling"
+      },
+      "benchmark_status": "evaluated",
+      "selection_partition": "fixed MRNet tuning partition (226 studies)",
+      "calibration_partition": "reserved MRNet calibration partition (100 studies)",
+      "inference_time_seconds": null,
+      "inference_time_note": "No per-candidate latency benchmark was retained; this field is intentionally blank rather than estimated.",
+      "runtime_checkpoint_available": false,
+      "runtime_status": "comparison result retained; checkpoint not locally installed"
+    },
+    {
+      "id": "family_densenet121",
+      "status": "evaluated",
+      "architecture": "densenet121",
+      "checkpoint": "runs\\model_family_v2\\models\\densenet121_best.pth",
+      "checkpoint_sha256": "a8c7e4c1d5103d7497a26d0690eca43a9e0be2ba1cba29181626ce3f88834d33",
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1,
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.8468360969154308,
+            "bias": 1.2000687994412278
+          },
+          {
+            "scale": 0.6435609841692393,
+            "bias": -0.2773314468422095
+          },
+          {
+            "scale": 0.725412418038533,
+            "bias": -0.01201805368231286
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "calibration_reliability": {
+        "abnormal": {
+          "brier": 0.11615664357654279,
+          "log_loss": 0.3678621766313101
+        },
+        "acl": {
+          "brier": 0.13504326957816815,
+          "log_loss": 0.42173665619112755
+        },
+        "meniscus": {
+          "brier": 0.14293586844174852,
+          "log_loss": 0.4499610237257457
+        }
+      },
+      "thresholds": {
+        "abnormal": 0.5560261112538963,
+        "acl": 0.12059684609058874,
+        "meniscus": 0.5084952717280833
+      },
+      "target_scores": {
+        "abnormal": 0.8955475782667992,
+        "acl": 0.7612859870766253,
+        "meniscus": 0.7026460989113371
+      },
+      "validation_metrics": {
+        "abnormal": {
+          "auroc": 0.8813063921718134,
+          "average_precision": 0.9721906643979868,
+          "f1": 0.8919667590027701,
+          "sensitivity": 0.8797814207650273,
+          "specificity": 0.6046511627906976,
+          "precision": 0.9044943820224719,
+          "accuracy": 0.827433628318584,
+          "threshold": 0.5560261112538963,
+          "confusion_matrix": [
+            [
+              26,
+              17
+            ],
+            [
+              22,
+              161
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8171583850931677,
+          "average_precision": 0.6150005166715897,
+          "f1": 0.44171779141104295,
+          "sensitivity": 0.8571428571428571,
+          "specificity": 0.5380434782608695,
+          "precision": 0.2975206611570248,
+          "accuracy": 0.5973451327433629,
+          "threshold": 0.12059684609058874,
+          "confusion_matrix": [
+            [
+              99,
+              85
+            ],
+            [
+              6,
+              36
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8079307672436065,
+          "average_precision": 0.6637151996968358,
+          "f1": 0.6103896103896104,
+          "sensitivity": 0.5949367088607594,
+          "specificity": 0.8095238095238095,
+          "precision": 0.6266666666666667,
+          "accuracy": 0.7345132743362832,
+          "threshold": 0.5084952717280833,
+          "confusion_matrix": [
+            [
+              119,
+              28
+            ],
+            [
+              32,
+              47
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8354651815028626,
+          "average_precision": 0.7503021269221374,
+          "f1": 0.6480247202678079,
+          "sensitivity": 0.777286995589548,
+          "specificity": 0.6507394835251256,
+          "precision": 0.6095605699487211,
+          "accuracy": 0.71976401179941
+        }
+      },
+      "model_version": "model_family_v2",
+      "preprocessing_configuration": {
+        "config": "configs/model_family_v2.yaml",
+        "image_size": 224,
+        "slices_per_plane": 12,
+        "normalisation": "per-volume percentile 1 to 99 then ImageNet channel normalisation",
+        "aggregation": "mean and max study-level pooling"
+      },
+      "benchmark_status": "evaluated",
+      "selection_partition": "fixed MRNet tuning partition (226 studies)",
+      "calibration_partition": "reserved MRNet calibration partition (100 studies)",
+      "inference_time_seconds": null,
+      "inference_time_note": "No per-candidate latency benchmark was retained; this field is intentionally blank rather than estimated.",
+      "runtime_checkpoint_available": true,
+      "runtime_status": "selected and locally installed"
+    },
+    {
+      "id": "family_efficientnet_b0",
+      "status": "evaluated",
+      "architecture": "efficientnet_b0",
+      "checkpoint": "runs\\model_family_v2\\models\\efficientnet_b0_best.pth",
+      "checkpoint_sha256": "ca0a9e5d2e6cffd85a1dd6fd906628cb7fa138828adac80a061e75f45bfc6e0b",
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1,
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.7095868844006787,
+            "bias": 0.9861783509386275
+          },
+          {
+            "scale": 0.5864302362485134,
+            "bias": -0.16274038366527166
+          },
+          {
+            "scale": 0.5884092217149344,
+            "bias": -0.04487393414121659
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "calibration_reliability": {
+        "abnormal": {
+          "brier": 0.12339370195710883,
+          "log_loss": 0.3830003258794968
+        },
+        "acl": {
+          "brier": 0.13019543410193246,
+          "log_loss": 0.4089630842344256
+        },
+        "meniscus": {
+          "brier": 0.14730707344101754,
+          "log_loss": 0.46175719854464004
+        }
+      },
+      "thresholds": {
+        "abnormal": 0.7228784631996894,
+        "acl": 0.1597967668331025,
+        "meniscus": 0.39326623334747807
+      },
+      "target_scores": {
+        "abnormal": 0.8626550929442882,
+        "acl": 0.7494028846637713,
+        "meniscus": 0.7727154362006623
+      },
+      "validation_metrics": {
+        "abnormal": {
+          "auroc": 0.8857542254416063,
+          "average_precision": 0.9715775838330992,
+          "f1": 0.8554216867469879,
+          "sensitivity": 0.7759562841530054,
+          "specificity": 0.8372093023255814,
+          "precision": 0.9530201342281879,
+          "accuracy": 0.7876106194690266,
+          "threshold": 0.7228784631996894,
+          "confusion_matrix": [
+            [
+              36,
+              7
+            ],
+            [
+              41,
+              142
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8216873706004141,
+          "average_precision": 0.6287014801928215,
+          "f1": 0.49624060150375937,
+          "sensitivity": 0.7857142857142857,
+          "specificity": 0.6847826086956522,
+          "precision": 0.3626373626373626,
+          "accuracy": 0.7035398230088495,
+          "threshold": 0.1597967668331025,
+          "confusion_matrix": [
+            [
+              126,
+              58
+            ],
+            [
+              9,
+              33
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.834151382071816,
+          "average_precision": 0.7005905924760238,
+          "f1": 0.6820809248554913,
+          "sensitivity": 0.7468354430379747,
+          "specificity": 0.7619047619047619,
+          "precision": 0.6276595744680851,
+          "accuracy": 0.7566371681415929,
+          "threshold": 0.39326623334747807,
+          "confusion_matrix": [
+            [
+              112,
+              35
+            ],
+            [
+              20,
+              59
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8471976593712789,
+          "average_precision": 0.7669565521673148,
+          "f1": 0.6779144043687463,
+          "sensitivity": 0.7695020043017552,
+          "specificity": 0.7612988909753318,
+          "precision": 0.6477723571112118,
+          "accuracy": 0.7492625368731564
+        }
+      },
+      "model_version": "model_family_v2",
+      "preprocessing_configuration": {
+        "config": "configs/model_family_v2.yaml",
+        "image_size": 224,
+        "slices_per_plane": 12,
+        "normalisation": "per-volume percentile 1 to 99 then ImageNet channel normalisation",
+        "aggregation": "mean and max study-level pooling"
+      },
+      "benchmark_status": "evaluated",
+      "selection_partition": "fixed MRNet tuning partition (226 studies)",
+      "calibration_partition": "reserved MRNet calibration partition (100 studies)",
+      "inference_time_seconds": null,
+      "inference_time_note": "No per-candidate latency benchmark was retained; this field is intentionally blank rather than estimated.",
+      "runtime_checkpoint_available": false,
+      "runtime_status": "comparison result retained; checkpoint not locally installed"
+    },
+    {
+      "id": "family_swin_t",
+      "status": "evaluated",
+      "architecture": "swin_t",
+      "checkpoint": "runs\\model_family_v2\\models\\swin_t_best.pth",
+      "checkpoint_sha256": "2cc4c4fcadea919e5a0e0d1fb3688cfc748af502617fac7311d97f37204476a3",
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1,
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.7916975330825925,
+            "bias": 0.936653202073811
+          },
+          {
+            "scale": 0.5183729575949505,
+            "bias": -0.3143806306079374
+          },
+          {
+            "scale": 0.5708395790569278,
+            "bias": -0.05081229840400988
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "calibration_reliability": {
+        "abnormal": {
+          "brier": 0.12219730898980792,
+          "log_loss": 0.3783405316557009
+        },
+        "acl": {
+          "brier": 0.13544804789026707,
+          "log_loss": 0.42483987950816277
+        },
+        "meniscus": {
+          "brier": 0.15906266578920705,
+          "log_loss": 0.4853182995844603
+        }
+      },
+      "thresholds": {
+        "abnormal": 0.7644956540307505,
+        "acl": 0.13489402025413108,
+        "meniscus": 0.3102556632224127
+      },
+      "target_scores": {
+        "abnormal": 0.856922166715535,
+        "acl": 0.7610266803639887,
+        "meniscus": 0.7952639589322147
+      },
+      "validation_metrics": {
+        "abnormal": {
+          "auroc": 0.8901385182361163,
+          "average_precision": 0.9732265589943115,
+          "f1": 0.8414634146341463,
+          "sensitivity": 0.7540983606557377,
+          "specificity": 0.8372093023255814,
+          "precision": 0.9517241379310345,
+          "accuracy": 0.7699115044247787,
+          "threshold": 0.7644956540307505,
+          "confusion_matrix": [
+            [
+              36,
+              7
+            ],
+            [
+              45,
+              138
+            ]
+          ],
+          "positive_cases": 183,
+          "negative_cases": 43
+        },
+        "acl": {
+          "auroc": 0.8126940993788819,
+          "average_precision": 0.6230065440414985,
+          "f1": 0.4472049689440994,
+          "sensitivity": 0.8571428571428571,
+          "specificity": 0.5489130434782609,
+          "precision": 0.3025210084033613,
+          "accuracy": 0.6061946902654868,
+          "threshold": 0.13489402025413108,
+          "confusion_matrix": [
+            [
+              101,
+              83
+            ],
+            [
+              6,
+              36
+            ]
+          ],
+          "positive_cases": 42,
+          "negative_cases": 184
+        },
+        "meniscus": {
+          "auroc": 0.8158098682510979,
+          "average_precision": 0.6654571822296643,
+          "f1": 0.7010309278350515,
+          "sensitivity": 0.8607594936708861,
+          "specificity": 0.6802721088435374,
+          "precision": 0.591304347826087,
+          "accuracy": 0.7433628318584071,
+          "threshold": 0.3102556632224127,
+          "confusion_matrix": [
+            [
+              100,
+              47
+            ],
+            [
+              11,
+              68
+            ]
+          ],
+          "positive_cases": 79,
+          "negative_cases": 147
+        },
+        "macro": {
+          "auroc": 0.8395474952886987,
+          "average_precision": 0.7538967617551581,
+          "f1": 0.6632331038044325,
+          "sensitivity": 0.8240002371564937,
+          "specificity": 0.6887981515491265,
+          "precision": 0.615183164720161,
+          "accuracy": 0.7064896755162242
+        }
+      },
+      "model_version": "model_family_v2",
+      "preprocessing_configuration": {
+        "config": "configs/model_family_v2.yaml",
+        "image_size": 224,
+        "slices_per_plane": 12,
+        "normalisation": "per-volume percentile 1 to 99 then ImageNet channel normalisation",
+        "aggregation": "mean and max study-level pooling"
+      },
+      "benchmark_status": "evaluated",
+      "selection_partition": "fixed MRNet tuning partition (226 studies)",
+      "calibration_partition": "reserved MRNet calibration partition (100 studies)",
+      "inference_time_seconds": null,
+      "inference_time_note": "No per-candidate latency benchmark was retained; this field is intentionally blank rather than estimated.",
+      "runtime_checkpoint_available": true,
+      "runtime_status": "selected and locally installed"
+    }
+  ],
+  "active_runtime_policy": "dynamic_selection_v1"
 }

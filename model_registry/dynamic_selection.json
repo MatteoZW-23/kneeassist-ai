@@ -1,0 +1,230 @@
+{
+  "version": "dynamic_selection_v1",
+  "status": "active_research_prototype",
+  "selection_mode": "learned_case_specific_expected_mean_brier",
+  "selector_artifact": "runs/dynamic_selection_v1/selector/dynamic_selector.joblib",
+  "selector_sha256": "7ff51abe6149b8806636f18233625841b4f7a536217bcbde204ae5ae43fe0fdf",
+  "dataset": "MRNet-v1.0",
+  "split_sha256": "2426492e9c97ad494e303103efb8b7228ad462d67d795e9a15921a3b7d4a9c05",
+  "models": [
+    {
+      "id": "dms_resnet18",
+      "architecture": "resnet18",
+      "checkpoint": "runs/dynamic_selection_v1/models/resnet18_best.pth",
+      "checkpoint_sha256": "d7cbe15e12cc929072d7710f293c900db3dd7710ea5b01735085f5e60172fcc0",
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.9710437121077248,
+            "bias": 1.1275645308387656
+          },
+          {
+            "scale": 0.5745352459184218,
+            "bias": -0.44498252936847266
+          },
+          {
+            "scale": 0.7565631795006785,
+            "bias": 0.034774087297219654
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "thresholds": {
+        "abnormal": 0.5682875079852721,
+        "acl": 0.13879471055749293,
+        "meniscus": 0.2890260107448952
+      },
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1
+    },
+    {
+      "id": "dms_resnet50",
+      "architecture": "resnet50",
+      "checkpoint": "runs/dynamic_selection_v1/models/resnet50_best.pth",
+      "checkpoint_sha256": "fef5ba7563bf36a92eddfb9ea199d0c272c5b5004a41d9bab32aed32e764fee4",
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.689154412014913,
+            "bias": 0.8269774165695096
+          },
+          {
+            "scale": 0.5096853964575407,
+            "bias": -0.28082453259191686
+          },
+          {
+            "scale": 0.6788387815835479,
+            "bias": 0.03647051185035105
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "thresholds": {
+        "abnormal": 0.7517432934136019,
+        "acl": 0.09705513660853123,
+        "meniscus": 0.383953594714983
+      },
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1
+    },
+    {
+      "id": "dms_densenet121",
+      "architecture": "densenet121",
+      "checkpoint": "runs/dynamic_selection_v1/models/densenet121_best.pth",
+      "checkpoint_sha256": "63fa29fd8a75b4fbeed39567a160ff69d022173a4846a476c66202f4277abb8c",
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.8395939269681948,
+            "bias": 1.1486098747701996
+          },
+          {
+            "scale": 0.5434597094798124,
+            "bias": -0.41961314858809445
+          },
+          {
+            "scale": 0.7329739973463603,
+            "bias": 0.05887631394678087
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "thresholds": {
+        "abnormal": 0.5342313833144362,
+        "acl": 0.1152839177284393,
+        "meniscus": 0.511987295437124
+      },
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1
+    },
+    {
+      "id": "dms_efficientnet_b0",
+      "architecture": "efficientnet_b0",
+      "checkpoint": "runs/dynamic_selection_v1/models/efficientnet_b0_best.pth",
+      "checkpoint_sha256": "6a180831af3f1d236cbc257fb89d03595cdf88ab4967611d3ee5f63ce528cc2d",
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.6852630628937256,
+            "bias": 1.0168366222769305
+          },
+          {
+            "scale": 0.5130923888588663,
+            "bias": -0.3012368210880137
+          },
+          {
+            "scale": 0.603059661188826,
+            "bias": 0.017485574251474376
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "thresholds": {
+        "abnormal": 0.7197618739759236,
+        "acl": 0.3300775457454293,
+        "meniscus": 0.46550591373027694
+      },
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1
+    },
+    {
+      "id": "dms_swin_t",
+      "architecture": "swin_t",
+      "checkpoint": "runs/dynamic_selection_v1/models/swin_t_best.pth",
+      "checkpoint_sha256": "15ba036ddd3401542b1b8695541cbb81a2519953754c6386a918c1fd04ae2407",
+      "calibration": {
+        "method": "positive_slope_platt",
+        "source": "reserved_MRNet_calibration",
+        "cases": 100,
+        "parameters": [
+          {
+            "scale": 0.7736754059996676,
+            "bias": 0.9630029229124166
+          },
+          {
+            "scale": 0.4883093150738597,
+            "bias": -0.44030393971039355
+          },
+          {
+            "scale": 0.6477889555088187,
+            "bias": 0.060212434323910394
+          }
+        ],
+        "limitation": "Small development calibration cohort; external clinical calibration is not established."
+      },
+      "thresholds": {
+        "abnormal": 0.551389039071567,
+        "acl": 0.11763785902239675,
+        "meniscus": 0.2551592213453295
+      },
+      "supported_targets": [
+        "abnormal",
+        "acl",
+        "meniscus"
+      ],
+      "supported_planes": [
+        "axial",
+        "coronal",
+        "sagittal"
+      ],
+      "minimum_planes": 1
+    }
+  ],
+  "evaluation": "runs/dynamic_selection_v1/final_evaluation.json",
+  "limitation": "MRNet patient IDs are unavailable in this copy and official_valid had prior development exposure; this is not an independent clinical test.",
+  "selector_provenance": {
+    "estimator_family": "GradientBoostingRegressor",
+    "estimator_pipelines": 5,
+    "metadata_correction": "Embedded artifact protocol wording corrected from RidgeCV to GradientBoostingRegressor; fitted estimators and base-model checkpoints were unchanged.",
+    "previous_selector_sha256": "edb85c4e679c568ac07a51acb2f9b2bfdd4dd069b2b2a9706cf2028c2fbf4b13",
+    "corrected_selector_sha256": "7ff51abe6149b8806636f18233625841b4f7a536217bcbde204ae5ae43fe0fdf"
+  }
+}

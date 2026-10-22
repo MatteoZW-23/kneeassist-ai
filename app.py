@@ -22,7 +22,7 @@ cfg=config()
 if not cfg.get('lifecycle',{}).get('inference_enabled',True):
     st.title('KneeAssist XAI')
     st.info('MRI analysis is disabled in the current deployment configuration.')
-    st.caption('See START_HERE.md for the active model and verification status.')
+    st.caption('Enable inference in config.yaml and relaunch the application.')
     st.stop()
 st.markdown('''<style>
 .stApp {background:#f5f8fc;}
@@ -107,7 +107,7 @@ def _selection_table(target):
             'Accuracy': round(metrics['accuracy'], 3),
             'Brier score': round(item['brier'], 3) if item['brier'] is not None else 'Not retained',
             'Inference time': (f"{item['inference_time']:.3f} s" if item['inference_time'] is not None else 'Not retained'),
-            'Selected for this target': 'Yes' if rank == 1 else 'No',
+            'Archived fixed-route winner': 'Yes' if rank == 1 else 'No',
             'Checkpoint status': item['status'],
         })
     return pd.DataFrame(rows)
@@ -205,7 +205,7 @@ def render_dynamic_selection_evidence():
         return
     status = dynamic_selection_status(cfg)
     st.caption(
-        'For each study, the five base models run first. A regularised competence estimator then chooses the architecture '
+        'For each study, the five base models run first. A Gradient Boosting competence estimator then chooses the architecture '
         'with the lowest estimated mean Brier loss from current study features and five-model outputs. It cannot access an uploaded study label.'
     )
     if status['available']:
@@ -290,10 +290,10 @@ def render_recorded_model_evaluation():
         st.info(formal.get('reason', 'Formal comparison evidence is unavailable.'))
 
     st.divider()
-    st.subheader('Supplementary target-routing portfolio')
-    st.caption('This separate portfolio records static routes. These checkpoints are not the new dynamic-selection experiment checkpoints.')
+    st.subheader('Archived fixed-routing benchmark — not used for uploaded studies')
+    st.caption('This retained benchmark documents an earlier fixed target-routing comparison. It is not used while the active dynamic selector is enabled for uploaded studies.')
 
-    st.subheader('Supplementary portfolio design')
+    st.subheader('Archived benchmark design')
     design_left, design_right = st.columns([1, 1.25])
     with design_left:
         st.dataframe(pd.DataFrame(split_summary()), hide_index=True, width='stretch')
@@ -307,7 +307,7 @@ def render_recorded_model_evaluation():
         st.code('Selection score = ' + formula, language=None)
         st.caption('Calibration is reported with Brier score and log loss. It is not included in the score because ECE was not retained; no value is invented.')
 
-    st.subheader('Target-specific ranking from saved validation evidence')
+    st.subheader('Archived fixed-route ranking from saved validation evidence')
     tabs = st.tabs([target['display'] for target in cfg['targets']])
     for tab, target in zip(tabs, cfg['targets']):
         with tab:
@@ -317,14 +317,14 @@ def render_recorded_model_evaluation():
                 st.error('No saved candidate evidence was found for this target.')
                 continue
             winner = ranking[0]
-            st.success(f"Best validated model: {winner['model']} (selection score {winner['selection_score']:.3f}). This winner was decided from the locked tuning validation evidence before case scoring.")
+            st.info(f"Archived fixed-route winner: {winner['model']} (selection score {winner['selection_score']:.3f}). This saved comparison is shown for research history only; it is not the active upload-time dynamic selection decision.")
             st.dataframe(table, hide_index=True, width='stretch')
             chart = table.set_index('Model')[['AUROC', 'PR-AUC (AP)', 'Sensitivity', 'Specificity', 'F1', 'Selection score']]
             st.bar_chart(chart, width='stretch')
             _render_saved_candidate_artifacts(target['key'], ranking)
-            st.caption('“Benchmark evidence only” means the measured result is retained but its non-winning checkpoint is not installed for live inference. The system does not substitute it for a selected winner.')
+            st.caption('This is retained benchmark evidence. The live dynamic workflow instead executes all five candidates and uses the saved expected-loss selector for the uploaded study.')
 
-    st.subheader('Recorded static routes')
+    st.subheader('Archived fixed routes — dynamic selection fallback only')
     route_rows = []
     for target in cfg['targets']:
         ranked = ranking_for_target(target['key'])
@@ -335,10 +335,10 @@ def render_recorded_model_evaluation():
                 'Selected model': winner['model'],
                 'Selection score': round(winner['selection_score'], 3),
                 'Selection basis': 'Highest predefined validation score among compatible benchmark candidates',
-                'Live route': 'Registered and selected' if winner['locally_available'] else 'Unavailable — inference blocked',
+                'Fallback availability': 'Available if dynamic selection is disabled' if winner['locally_available'] else 'Unavailable',
             })
     st.dataframe(pd.DataFrame(route_rows), hide_index=True, width='stretch')
-    st.caption('These routes apply only when dynamic selection is explicitly disabled. Dynamic mode runs its own five candidates and learned selector for each new study.')
+    st.caption('These routes are used only if dynamic selection is deliberately disabled. Under the normal active configuration, the system runs all five candidates and selects one architecture through the saved learned selector for each complete study.')
 
     st.subheader('Research traceability')
     st.dataframe(pd.DataFrame(objective_traceability()), hide_index=True, width='stretch')
@@ -351,20 +351,20 @@ def render_model_evaluation_page():
 
 
 def render_research_workflow_page():
-    st.markdown('<div class="intro"><div class="tag">Reproducible research workflow</div><h1>Research Workflow</h1><p>This page summarises the offline evaluation and online inference workflow used by the application.</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="intro"><div class="tag">Reproducible research workflow</div><h1>Research Workflow</h1><p>This page summarises the offline model-development workflow and the local MRI-analysis process implemented in this application.</p></div>', unsafe_allow_html=True)
     st.subheader('Workflow stages')
     if cfg.get('dynamic_selection',{}).get('enabled',False):
         steps = [
             ('1','Review the fixed MRNet roles','The experiment uses 704 fitting, 100 tuning, 100 calibration, 226 selector-training and 120 final-evaluation studies. Study and exact-series overlaps are checked; patient linkage is unavailable.'),
             ('2','Train five base classifiers','ResNet-18, ResNet-50, DenseNet-121, EfficientNet-B0 and Swin-T use the same study IDs, preprocessing and three target labels. This run trains classifier heads with frozen ImageNet encoders.'),
             ('3','Calibrate outputs','Each base model is calibrated only on the reserved calibration partition.'),
-            ('4','Train the competence estimators','Five regularised loss regressors learn from base-model outputs on the separate 226-study selector partition. Ground truth supplies Brier-loss training targets only offline.'),
+            ('4','Train the competence estimators','Five Gradient Boosting competence estimators learn from model-output and study features on the separate 226-study selector partition. Ground truth supplies mean Brier-loss training targets only during offline development.'),
             ('5','Evaluate the complete system','All five bases and dynamic selection are scored on the same 120 studies excluded from DMS fitting. Prior project exposure prevents an independent-test claim.'),
             ('6','Upload an MRI study','Binary content, dimensions, finite intensities and available metadata are checked. Processed arrays with unknown planes require manual confirmation.'),
             ('7','Run all five models','Every valid analysis executes every candidate on the same original study, with the same normalisation, resizing and slice sampling.'),
             ('8','Select for this study','Current probabilities, entropy, disagreement and acquisition features enter the learned selector. The architecture with the lowest estimated mean Brier loss provides all three final outputs.'),
             ('9','Review the decision','The application shows five-model probabilities, estimated losses, selected architecture, thresholds and timing. A new upload invalidates the previous result.'),
-            ('10','View attention and export','Grad-CAM uses the selected model. Its coarse image-coordinate explanation and the reproducible analysis summary can be exported. Detection and segmentation remain unavailable.'),
+            ('10','View attention and export','Grad-CAM uses the selected model. Its coarse classifier-attention overlay and the reproducible analysis summary can be exported. Detection and segmentation remain unavailable.'),
         ]
     else:
         steps = [

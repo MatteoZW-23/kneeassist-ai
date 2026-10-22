@@ -4,9 +4,12 @@ dataset:
   name: MRNet-v1.0
   root: data/MRNet-v1.0
   manifest: data/mrnet_manifest.csv
-  splits: runs/mri_finetune_02/splits.json
+  # The active five-model selector uses this single, immutable split for every
+  # candidate architecture and for its separate calibration/selector stages.
+  splits: data/splits/dynamic_selection_v1.json
+  split_manifest: runs/dynamic_selection_v1/protocol.json
   patient_mapping: null
-# Default target thresholds are baseline fallbacks; routed inference uses the per-target thresholds in model_registry/active_models.json.
+# Routed inference obtains its per-target thresholds from model_registry/active_models.json.
 targets:
 - key: abnormal
   display: General Abnormality
@@ -32,11 +35,22 @@ preprocessing:
   - coronal
   - sagittal
 model:
-  # Formal baseline-training candidates. Live inference is governed by model_registry/active_models.json.
+  # Live inference is governed by model_registry/active_models.json.
   active_registry: model_registry/active_models.json
   architectures:
   - resnet18
+  - resnet50
+  - densenet121
   - efficientnet_b0
+  - swin_t
+  # The fixed five-model benchmark population used by the selection engine.
+  # Each member used the saved MRNet split and preprocessing protocol.
+  benchmark_architectures:
+  - resnet18
+  - resnet50
+  - densenet121
+  - efficientnet_b0
+  - swin_t
   selected_architecture: auto
   encoder_pretrained: true
   encoder_precision: float32
@@ -65,10 +79,11 @@ training:
   gradient_accumulation: 4
   encoder_learning_rate: 1.0e-05
 evaluation:
-  # Historical EfficientNet-B0 fallback used only by standalone baseline scripts; Streamlit uses model_registry/active_models.json.
+  # The dashboard loads target routes through the registry. A standalone
+  # Predictor must be given an explicit checkpoint path.
   threshold_selection: reserved_calibration_youden
-  checkpoint: models/best_model.pth
-  directory: runs/mri_finetune_02/results
+  checkpoint: null
+  directory: runs/model_portfolio_v1
   prediction_examples: 3
   uncertainty_estimation: true
   uncertainty_samples: 10
@@ -77,27 +92,23 @@ ui:
   port: 8501
   margin_high: 0.25
   margin_moderate: 0.1
-external_kneemri:
-  root: data/external/KneeMRI/original_download
-  metadata: data/external/KneeMRI/metadata.csv
-  results: runs/mri_finetune_02/results/external_kneemri
 lifecycle:
   state: ready_for_research_testing
   training_enabled: false
   inference_enabled: true
   reset_requested: true
   deletion_completed: false
-external_fastmri:
-  raw_source_status: Raw fastMRI source was archived outside the active project after import.
-  root: data/external/fastMRI/images
-  manifest: data/external/fastMRI/image_manifest.csv
-  annotations: data/external/fastMRI-plus/knee.csv
-  reviewed_files: data/external/fastMRI-plus/knee_file_list.csv
-  intended_use: Exploratory meniscus evaluation only; non-exhaustive reference annotations
-  label_mapping_verified: false
+dynamic_selection:
+  # All five models execute for each valid analysis. The learned selector chooses
+  # one architecture for all three outputs. No training occurs during uploads.
+  enabled: true
+  artifact: runs/dynamic_selection_v1/selector/dynamic_selector.joblib
+  registry: model_registry/dynamic_selection.json
 paths:
   models: models
-  features: runs/mrnet_fresh_01/features
-run_directory: runs/mri_finetune_02
+  # Derived feature caches are not required for the saved routed dashboard.
+  # A new training experiment should create its own cache under this location.
+  features: data/features
+run_directory: runs/model_portfolio_v1
 
 

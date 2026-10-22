@@ -1,7 +1,16 @@
 import numpy as np
-import torch
-import torch.nn.functional as F
-from src.models.aggregation import aggregate
+
+try:
+    import torch
+    import torch.nn.functional as F
+    from src.models.aggregation import aggregate
+    HAS_TORCH = True
+except ImportError:
+    torch = None
+    F = None
+    aggregate = None
+    HAS_TORCH = False
+
 from src.data.preprocessing import InputError
 
 
@@ -78,6 +87,8 @@ def is_valid_attention_payload(payload):
 
 
 def explain(predictor,volumes,target,plane):
+    if not HAS_TORCH:
+        raise RuntimeError("PyTorch is required for Grad-CAM explain().")
     keys=[t['key'] for t in predictor.model_cfg['targets']]
     if target not in keys or plane not in volumes:raise InputError('Choose an available sequence and a supported finding.')
     tensors,prepared=predictor.tensors(volumes);model=predictor.model;model.eval()

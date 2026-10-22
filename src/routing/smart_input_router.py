@@ -7,7 +7,7 @@ import numpy as np
 
 from src.data.preprocessing import (
     InputError, input_config, _dicom_plane, _dicom_text_plane, _file_kind, _nifti_volume,
-    _plane_from_path, _upload_identifier, pydicom, safe_npy,
+    _plane_from_path, _upload_identifier, pydicom, safe_npy, validate_dicom_modality,
 )
 
 
@@ -41,7 +41,7 @@ def _npy_descriptor(identifier, name, raw, cfg):
 
 
 def _nifti_descriptor(identifier, name, raw, cfg):
-    values,details=_nifti_volume(raw,cfg,compressed=_file_kind(name)=='nifti_gz')
+    values,details=_nifti_volume(raw,cfg,compressed=_file_kind(name,raw)=='nifti_gz')
     _,hint=_plane_from_path(name,cfg['planes'],allow_unknown=True)
     if (details['plane'] is not None and hint is not None
             and details['confidence'] >= 0.6 and details['plane'] != hint):
@@ -60,6 +60,7 @@ def _dicom_descriptor(identifier, name, raw, cfg):
         dataset=pydicom.dcmread(io.BytesIO(raw),stop_before_pixels=True,force=False)
     except Exception as e:
         raise InputError(f'{PurePosixPath(name).name} is not a readable DICOM file.') from e
+    validate_dicom_modality(dataset)
     rows=int(getattr(dataset,'Rows',0) or 0);columns=int(getattr(dataset,'Columns',0) or 0)
     actual=_dicom_plane(dataset) or _dicom_text_plane(dataset,cfg['planes'])
     _,hint=_plane_from_path(name,cfg['planes'],allow_unknown=True)
@@ -80,7 +81,8 @@ def inspect_uploads(files, cfg):
     descriptors=[]
     for upload_index,(name,raw) in enumerate(files):
         upload_id=_upload_identifier(name,upload_index)
-        kind=_file_kind(name)
+        if len(raw)>cfg['max_upload_mb']*1024**2:raise InputError('The file exceeds the configured upload limit.')
+        kind=_file_kind(name,raw)
         if kind=='npy': descriptors.append(_npy_descriptor(upload_id,name,raw,cfg))
         elif kind in ('nifti','nifti_gz'): descriptors.append(_nifti_descriptor(upload_id,name,raw,cfg))
         elif kind=='dcm': descriptors.append(_dicom_descriptor(upload_id,name,raw,cfg))
@@ -89,10 +91,13 @@ def inspect_uploads(files, cfg):
                 with zipfile.ZipFile(io.BytesIO(raw)) as archive:
                     items=[item for item in archive.infolist() if not item.is_dir()]
                     if not items: raise InputError('The study ZIP is empty.')
+                    if len(items)>cfg.get('max_dicom_files',768):raise InputError('The MRI archive contains too many files.')
+                    if len({item.filename for item in items})!=len(items):raise InputError('The MRI archive contains duplicate entry names.')
                     if sum(item.file_size for item in items)>cfg['max_upload_mb']*1024**2:
                         raise InputError('The uncompressed study ZIP exceeds the configured upload limit.')
                     for item in items:
-                        identifier=f'{upload_id}::{item.filename}';entry=archive.read(item);entry_kind=_file_kind(item.filename)
+                        _plane_from_path(item.filename,cfg['planes'],allow_unknown=True)
+                        identifier=f'{upload_id}::{item.filename}';entry=archive.read(item);entry_kind=_file_kind(item.filename,entry)
                         if entry_kind=='npy': descriptors.append(_npy_descriptor(identifier,item.filename,entry,cfg))
                         elif entry_kind in ('nifti','nifti_gz'): descriptors.append(_nifti_descriptor(identifier,item.filename,entry,cfg))
                         elif entry_kind=='dcm': descriptors.append(_dicom_descriptor(identifier,item.filename,entry,cfg))
@@ -100,7 +105,7 @@ def inspect_uploads(files, cfg):
             except (zipfile.BadZipFile,RuntimeError) as e:
                 raise InputError('The study ZIP is corrupt or encrypted.') from e
         else:
-            raise InputError('Supported inputs are .npy, .nii, .nii.gz, .dcm, or a ZIP containing one supported MRI study.')
+            raise InputError('Supported inputs are .npy, .npz, .nii, .nii.gz, .dcm, or a ZIP containing one supported MRI study. JPEG/PNG are not supported.')
     if not descriptors: raise InputError('Upload at least one MRI sequence before analysing the case.')
     detected={item['detected_plane'] for item in descriptors if item['detected_plane']}
     return {'files':descriptors,'available_planes':sorted(detected),'requires_confirmation':[item for item in descriptors if item['requires_confirmation']]}

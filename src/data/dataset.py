@@ -74,7 +74,7 @@ def split_and_check(rows,cfg):
             'within_partition_duplicate_series':duplicate_within,
             'patient_grouping_verified':bool(patient),
             'limitation':'Patient linkage is absent from this MRNet copy; study separation cannot prove patient independence.' if not patient else None,
-            'prior_evaluation_disclosure':'The official 120-exam validation set was previously evaluated in the earlier baseline; it is not a new external test set.'}
+            'prior_evaluation_disclosure':'The official 120-exam validation set had prior development exposure; it is not a new external test set.'}
     save_json(resolve(cfg['evaluation']['directory'])/'leakage_audit.json',report)
     save_json(ROOT/'data/content_hashes.json',file_hashes)
     return split,report

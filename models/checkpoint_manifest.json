@@ -1,18 +1,5 @@
 [
   {
-    "file": "models/best_model.pth",
-    "bytes": 20331709,
-    "sha256": "b60293f6c7130fd646c81b6d758584faf3e17b2689503b5278ad711156d546da",
-    "architecture": "efficientnet_b0",
-    "training_dataset": "MRNet-v1.0",
-    "targets": [
-      "abnormal",
-      "acl",
-      "meniscus"
-    ],
-    "release_role": "Historical formal EfficientNet-B0 baseline checkpoint; not the active target-routed dashboard."
-  },
-  {
     "file": "runs/model_family_v2/models/densenet121_best.pth",
     "bytes": 31628914,
     "sha256": "a8c7e4c1d5103d7497a26d0690eca43a9e0be2ba1cba29181626ce3f88834d33",

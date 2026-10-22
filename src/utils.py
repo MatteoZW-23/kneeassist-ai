@@ -4,8 +4,14 @@ import os
 import random
 from pathlib import Path
 import numpy as np
-import torch
 import yaml
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    torch = None
+    HAS_TORCH = False
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,17 +31,21 @@ def save_json(path, data):
 
 def seed_everything(seed, threads=4):
     os.environ['CUBLAS_WORKSPACE_CONFIG']=':4096:8'
-    random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
-    if torch.cuda.is_available(): torch.cuda.manual_seed_all(seed)
-    torch.set_num_threads(threads)
-    torch.backends.cudnn.benchmark=False
-    torch.backends.cudnn.deterministic=True
-    torch.use_deterministic_algorithms(True, warn_only=True)
+    random.seed(seed); np.random.seed(seed)
+    if torch is not None:
+        torch.manual_seed(seed)
+        if torch.cuda.is_available(): torch.cuda.manual_seed_all(seed)
+        torch.set_num_threads(threads)
+        torch.backends.cudnn.benchmark=False
+        torch.backends.cudnn.deterministic=True
+        torch.use_deterministic_algorithms(True, warn_only=True)
 
 def fingerprint(value):
     return hashlib.sha256(json.dumps(value,sort_keys=True).encode()).hexdigest()
 
 def get_device(cfg):
+    if torch is None:
+        raise RuntimeError("PyTorch is not installed in the current Python environment.")
     request=cfg['training']['device']
     if request=='cuda' and not torch.cuda.is_available():
         raise RuntimeError('CUDA was requested but no compatible GPU is available.')

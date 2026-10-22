@@ -1,43 +1,42 @@
-# KneeAssist XAI active research model card
+# KneeAssist XAI model card
 
-## Purpose
+## Intended research use
 
-KneeAssist XAI is a local explainable-AI research prototype for **study-level classification** of knee MRI examinations. It produces research scores for general abnormality, ACL tear and meniscal tear. It is not a diagnostic device and does not recommend treatment.
+KneeAssist XAI is a local research prototype for study-level knee MRI classification. It reports research scores for general abnormality, ACL tear and meniscal tear. It is not a diagnostic device and does not recommend treatment.
 
-## Active target routing
+## Active model family and selection
 
-The dashboard selects compatible models from a fixed local registry before analysing the upload. It does **not** select the model that gives the highest score for an individual case.
+The active registry contains ResNet-18, ResNet-50, DenseNet-121, EfficientNet-B0 and Swin Transformer. Each valid upload runs every registered candidate after the same saved MRI preprocessing. A Gradient Boosting competence selector estimates mean Brier loss for each candidate using the current candidate probability vector, prediction entropy, model disagreement and available-plane descriptors. The lowest estimated loss selects one architecture for all three outputs and the Grad-CAM view.
 
-| Finding | Registered model | Selection evidence |
-|---|---|---|
-| General abnormality | DenseNet-121 | Highest locked tuning score for this finding |
-| ACL tear | ResNet-18 | Highest locked tuning score for this finding |
-| Meniscal tear | Swin Transformer | Highest locked tuning score for this finding |
+The selection is performed after upload but before the final result is displayed. It cannot access the study's unknown MRI label. It is not a probability ensemble, it does not retrain online, and it is not a guarantee that the selected model is correct.
 
-The selection score weights AUROC (0.45), sensitivity (0.30), average precision (AP; a precision-recall-curve summary) (0.15) and F1-score (0.10). Each candidate was calibrated with a reserved MRNet development subset. See `../runs/model_portfolio_v1/portfolio_report.json` and `../runs/model_portfolio_v1/final/metrics.json`.
+## Data and preprocessing
 
-## Development evaluation
+The supervised source is MRNet v1 only. Inputs are MRI slice stacks. The active pipeline uses p1–p99 normalisation, 224 × 224 resizing, twelve evenly spaced slices per available plane and study-level slice aggregation. Supported file formats are NPY/NPZ, NIfTI, DICOM slices and supported DICOM ZIP studies. JPEG/PNG inputs are rejected.
 
-The target-routed system was evaluated on 120 MRNet official validation studies that had previously been used during development. It is therefore development evidence, not an independent clinical test.
+## Recorded dynamic-system evidence
 
-| Finding | AUROC | F1 | Sensitivity | Specificity | Accuracy |
-|---|---:|---:|---:|---:|---:|
-| General abnormality | 0.861 | 0.929 | 0.968 | 0.560 | 0.883 |
-| ACL tear | 0.870 | 0.763 | 0.926 | 0.591 | 0.742 |
-| Meniscal tear | 0.808 | 0.677 | 0.846 | 0.500 | 0.650 |
-| Macro average | 0.846 | 0.790 | 0.914 | 0.550 | 0.758 |
+Source: `runs/dynamic_selection_v1/final_evaluation.json`.
 
-## Training data and inputs
+| Macro measure | Result |
+|---|---:|
+| AUROC | 0.847 |
+| Average precision | 0.840 |
+| Accuracy | 0.744 |
+| Sensitivity | 0.848 |
+| Specificity | 0.550 |
+| Precision | 0.697 |
+| F1-score | 0.764 |
+| Brier score | 0.160 |
 
-All active classifiers were trained and compared using MRNet v1.0 only. The local working project contains the three registered route checkpoints. The Git repository retains only the historical EfficientNet-B0 baseline checkpoint; it does not redistribute the additional route weights. The registry supports one to three compatible axial, coronal and sagittal MRI sequences from the same study. NumPy, NIfTI, DICOM and supported study ZIP inputs are software-supported. NIfTI/DICOM convenience support has not been validated on a clinical cohort. JPEG/PNG pictures are rejected.
+These results come from a 120-study MRNet development cohort excluded from selector fitting but previously exposed in project development. The local MRNet copy contains no patient identifiers. They are not independent patient-level, external or clinical validation. The saved comparison shows a higher macro AUROC than the fixed candidates on this cohort, but does not establish independent or clinical superiority.
 
-## Important limits
+## Known limits
 
-- MRNet patient linkage is unavailable in this local copy; study separation does not prove patient independence.
-- No external clinical validation, prospective study, radiologist reader study or treatment evaluation has been completed.
-- Grad-CAM is coarse positive classifier attention, not a tear location, bounding box or segmentation mask.
-- A below-threshold score does not rule out an injury.
+- Only three MRNet reference-label targets are reported.
+- No reader study, prospective evaluation, external calibration or multi-site validation has been completed.
+- Grad-CAM is coarse positive classifier attention, not a tear location, detection box or segmentation mask.
+- The model has no validated prediction for MCL/PCL injury, fracture, effusion, cartilage damage or osteoarthritis.
+- A low or below-threshold score does not rule out injury.
 
-The system is suitable for academic demonstration and research testing only. Clinical review remains required.
-
-
+Clinical review remains required.
